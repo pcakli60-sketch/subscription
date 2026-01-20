@@ -7,7 +7,7 @@
 <style>
 :root{
  --bg:#f4f6f9;--card:#fff;--main:#1976d2;--text:#000;
- --warn:#fff3cd;--danger:#f8d7da;
+ --warn:#fff3cd;--danger:#f8d7da;--unpaid:#fdecea;
 }
 body{
  font-family:Arial;background:var(--bg);color:var(--text);
@@ -28,10 +28,20 @@ th,td{border:1px solid #ccc;padding:6px;text-align:center}
 th{background:var(--main);color:#fff}
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
+.unpaid{background:var(--unpaid)}
 .actions button{width:auto;margin:2px}
 .filters{display:flex;gap:5px;flex-wrap:wrap}
 .stats{display:flex;gap:10px;flex-wrap:wrap}
 .stat{flex:1;text-align:center}
+.table-wrapper{overflow-x:auto}
+@media(max-width:768px){
+ table{min-width:900px}
+}
+.actions{
+ position:sticky;
+ right:0;
+ background:var(--card)
+}
 </style>
 </head>
 
@@ -42,24 +52,26 @@ th{background:var(--main);color:#fff}
 <!-- 🔍 البحث -->
 <input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
 
-<!-- 🔍 الفلترة -->
+<!-- 🔍 الفلاتر -->
 <div class="filters">
   <button onclick="setFilter('all')">الكل</button>
   <button onclick="setFilter('active')">نشط</button>
   <button onclick="setFilter('expired')">منتهي</button>
+  <button onclick="setFilter('unpaid')">❌ غير مدفوع</button>
 </div>
 
 <!-- 📊 الإحصائيات -->
 <div class="card stats">
-  <div class="stat">📦 الكل<br><b id="statTotal">0</b></div>
-  <div class="stat">🟢 نشط<br><b id="statActive">0</b></div>
-  <div class="stat">🔴 منتهي<br><b id="statExpired">0</b></div>
+  <div class="stat">📦 الكل<br><b id="stTotal">0</b></div>
+  <div class="stat">🟢 نشط<br><b id="stActive">0</b></div>
+  <div class="stat">🔴 منتهي<br><b id="stExpired">0</b></div>
+  <div class="stat">❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
 </div>
 
 <!-- ➕ إضافة -->
 <div class="card">
   <input id="name" placeholder="اسم الزبون">
-  <input id="phone" placeholder="الهاتف (213...)">
+  <input id="phone" placeholder="الهاتف">
   <input id="email" placeholder="Email">
   <select id="product">
     <option value="">المنتج</option>
@@ -72,7 +84,7 @@ th{background:var(--main);color:#fff}
 </div>
 
 <!-- 📋 الجدول -->
-<div class="card">
+<div class="card table-wrapper">
 <table>
 <thead>
 <tr>
@@ -82,6 +94,7 @@ th{background:var(--main);color:#fff}
 <th>المنتج</th>
 <th>الانتهاء</th>
 <th>الأيام</th>
+<th>مدفوع</th>
 <th>إجراءات</th>
 </tr>
 </thead>
@@ -98,25 +111,20 @@ function save(){
 }
 
 /* 💬 WhatsApp */
-function sendWhatsApp(phone, name, product, endDate, days){
-  const msg = `مرحباً ${name} 👋
-
+function sendWhatsApp(phone,name,product,endDate,days){
+  const msg=`مرحباً ${name}
 اشتراك ${product}
-${days === 0 ? "انتهى ❌" : "سينتهي بعد " + days + " أيام ⏰"}
+${days===0?"انتهى ❌":"سينتهي بعد "+days+" أيام"}
 📅 ${endDate}
-
-يرجى التواصل للتجديد.
-`;
+يرجى التواصل للتجديد`;
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
 }
 
 /* ➕ إضافة */
 function addSub(){
-  if(!name.value || !phone.value || !product.value || price.value<=0){
-    alert("يرجى ملء جميع الحقول");
-    return;
+  if(!name.value||!phone.value||!product.value||price.value<=0){
+    alert("يرجى ملء جميع الحقول");return;
   }
-
   let start=new Date();start.setHours(0,0,0,0);
   let end=new Date(start);end.setDate(end.getDate()+30);
 
@@ -128,6 +136,7 @@ function addSub(){
     product:product.value,
     price:price.value,
     end:end.toISOString(),
+    paid:false,
     n3:false,
     n0:false
   });
@@ -138,69 +147,85 @@ function addSub(){
   render();
 }
 
+/* 🔁 دفع */
+function togglePaid(id){
+  let s=subs.find(x=>x.id===id);
+  s.paid=!s.paid;
+  save();
+  render();
+}
+
 /* 🔍 فلترة */
 function setFilter(f){
   currentFilter=f;
   render();
 }
 
-/* 📅 تنسيق */
+/* 📅 */
 function fmt(d){
-  return d.getFullYear()+"/"+
-  String(d.getMonth()+1).padStart(2,"0")+"/"+
-  String(d.getDate()).padStart(2,"0");
+ return d.getFullYear()+"/"+
+ String(d.getMonth()+1).padStart(2,"0")+"/"+
+ String(d.getDate()).padStart(2,"0");
 }
 
 /* 🔄 عرض */
 function render(){
-  list.innerHTML="";
-  let today=new Date();today.setHours(0,0,0,0);
-  let q=search.value.toLowerCase();
+ list.innerHTML="";
+ let today=new Date();today.setHours(0,0,0,0);
+ let q=search.value.toLowerCase();
 
-  let total=0, active=0, expired=0;
+ let total=0,active=0,expired=0,unpaid=0;
 
-  subs.forEach(s=>{
-    let end=new Date(s.end);end.setHours(0,0,0,0);
-    let diff=Math.floor((end-today)/86400000);
+ subs.forEach(s=>{
+  let end=new Date(s.end);end.setHours(0,0,0,0);
+  let diff=Math.floor((end-today)/86400000);
 
-    total++;
-    if(diff<0) expired++; else active++;
+  total++;
+  if(diff<0) expired++; else active++;
+  if(!s.paid) unpaid++;
 
-    if(currentFilter==="active" && diff<0) return;
-    if(currentFilter==="expired" && diff>=0) return;
+  if(currentFilter==="active" && diff<0) return;
+  if(currentFilter==="expired" && diff>=0) return;
+  if(currentFilter==="unpaid" && s.paid) return;
 
-    if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))) return;
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))) return;
 
-    /* 🔔 WhatsApp تلقائي */
-    if(diff===3 && !s.n3){
-      sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-      s.n3=true;save();
-    }
-    if(diff===0 && !s.n0){
-      sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-      s.n0=true;save();
-    }
+  /* 🔔 WhatsApp تلقائي */
+  if(diff===3 && !s.n3){
+    sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+    s.n3=true;save();
+  }
+  if(diff===0 && !s.n0){
+    sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+    s.n0=true;save();
+  }
 
-    let tr=document.createElement("tr");
-    if(diff<0) tr.className="danger";
-    else if(diff<=3) tr.className="warn";
+  let tr=document.createElement("tr");
+  if(diff<0) tr.className="danger";
+  else if(diff<=3) tr.className="warn";
+  if(!s.paid) tr.classList.add("unpaid");
 
-    tr.innerHTML=`
+  tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
 <td>${s.email||"-"}</td>
 <td>${s.product}</td>
 <td>${fmt(end)}</td>
 <td>${diff}</td>
+<td>
+<input type="checkbox" ${s.paid?"checked":""}
+ onclick="togglePaid(${s.id})">
+</td>
 <td class="actions">
 <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
 </td>`;
-    list.appendChild(tr);
-  });
+  list.appendChild(tr);
+ });
 
-  statTotal.textContent=total;
-  statActive.textContent=active;
-  statExpired.textContent=expired;
+ stTotal.textContent=total;
+ stActive.textContent=active;
+ stExpired.textContent=expired;
+ stUnpaid.textContent=unpaid;
 }
 
 render();
