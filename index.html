@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>نظام إدارة الاشتراكات</title>
+
+<style>
+:root{
+ --bg:#f4f6f9;--card:#fff;--main:#1976d2;--text:#000;
+ --warn:#fff3cd;--danger:#f8d7da;
+}
+body{
+ font-family:Arial;background:var(--bg);color:var(--text);
+ padding:20px;transition:.3s
+}
+.dark{
+ --bg:#121212;--card:#1e1e1e;--text:#eee
+}
+h2{text-align:center;color:var(--main)}
+.card{
+ background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px
+}
+input,select,button{
+ width:100%;padding:10px;margin:5px 0;border-radius:5px
+}
+button{
+ background:var(--main);color:#fff;border:none;cursor:pointer
+}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:8px;text-align:center}
+th{background:var(--main);color:#fff}
+.warn{background:var(--warn)}
+.danger{background:var(--danger)}
+.actions button{margin:2px;padding:5px;width:auto}
+.top{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+</head>
+
+<body>
+
+<!-- 🔐 LOGIN -->
+<div id="login" class="card">
+  <h3 style="text-align:center">🔐 دخول النظام</h3>
+  <input type="password" id="pass" placeholder="كلمة المرور">
+  <button onclick="login()">دخول</button>
+</div>
+
+<!-- ✅ APP -->
+<div id="app" style="display:none">
+
+<div class="top">
+  <button onclick="toggleMode()">🌙 الوضع الليلي</button>
+  <button onclick="logout()">🚪 تسجيل الخروج</button>
+  <input id="search" placeholder="بحث..." onkeyup="render()">
+</div>
+
+<h2>نظام إدارة الاشتراكات</h2>
+
+<div class="card">
+  <input id="name" placeholder="اسم الزبون">
+  <input id="phone" placeholder="رقم الهاتف">
+  <input id="email" placeholder="البريد الإلكتروني">
+  <select id="product">
+    <option value="">اختر المنتج</option>
+    <option>Netflix</option>
+    <option>Shahid</option>
+    <option>IPTV</option>
+  </select>
+  <input id="price" type="number" placeholder="السعر (دج)">
+  <input id="days" type="number" placeholder="المدة بالأيام">
+  <button onclick="add()">➕ إضافة</button>
+</div>
+
+<div class="card">
+<table>
+<thead>
+<tr>
+<th>الاسم</th>
+<th>الهاتف</th>
+<th>الإيميل</th>
+<th>المنتج</th>
+<th>السعر</th>
+<th>تاريخ الانتهاء</th>
+<th>إجراءات</th>
+</tr>
+</thead>
+<tbody id="list"></tbody>
+</table>
+</div>
+
+</div>
+
+<script>
+/* 🔐 PASSWORD */
+const PASSWORD = "akli2525";
+
+const loginBox = document.getElementById("login");
+const appBox   = document.getElementById("app");
+
+function login(){
+  if(document.getElementById("pass").value === PASSWORD){
+    localStorage.setItem("auth","yes");
+    loginBox.style.display="none";
+    appBox.style.display="block";
+  }else alert("❌ كلمة المرور خاطئة");
+}
+
+function logout(){
+  localStorage.removeItem("auth");
+  location.reload();
+}
+
+if(localStorage.getItem("auth")==="yes"){
+  loginBox.style.display="none";
+  appBox.style.display="block";
+}
+
+/* 🌙 MODE */
+if(localStorage.getItem("dark")==="true")
+  document.body.classList.add("dark");
+
+function toggleMode(){
+  document.body.classList.toggle("dark");
+  localStorage.setItem("dark",
+    document.body.classList.contains("dark"));
+}
+
+/* 📦 DATA */
+const nameInput=document.getElementById("name");
+const phoneInput=document.getElementById("phone");
+const emailInput=document.getElementById("email");
+const productInput=document.getElementById("product");
+const priceInput=document.getElementById("price");
+const daysInput=document.getElementById("days");
+const searchInput=document.getElementById("search");
+const list=document.getElementById("list");
+
+let subs=JSON.parse(localStorage.getItem("subs")||"[]");
+
+function save(){
+  localStorage.setItem("subs",JSON.stringify(subs));
+}
+
+function fmt(d){
+ return d.getFullYear()+"/"+
+ String(d.getMonth()+1).padStart(2,"0")+"/"+
+ String(d.getDate()).padStart(2,"0");
+}
+
+function add(){
+ if(!nameInput.value||!phoneInput.value||!productInput.value||priceInput.value<=0||daysInput.value<=0)
+ return alert("يرجى ملء جميع الحقول");
+
+ let end=new Date();
+ end.setHours(0,0,0,0);
+ end.setDate(end.getDate()+Number(daysInput.value));
+
+ subs.push({
+  id:Date.now(),
+  name:nameInput.value,
+  phone:phoneInput.value,
+  email:emailInput.value,
+  product:productInput.value,
+  price:priceInput.value,
+  end:end.toISOString(),
+  notified:false
+ });
+
+ save(); render();
+ nameInput.value=phoneInput.value=emailInput.value=productInput.value=priceInput.value=daysInput.value="";
+}
+
+function render(){
+ list.innerHTML="";
+ let today=new Date(); today.setHours(0,0,0,0);
+ let q=searchInput.value.toLowerCase();
+
+ subs.sort((a,b)=>new Date(a.end)-new Date(b.end));
+
+ subs.forEach(s=>{
+  if(q&&!`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))return;
+
+  let end=new Date(s.end); end.setHours(0,0,0,0);
+  let diff=Math.ceil((end-today)/86400000);
+
+  let tr=document.createElement("tr");
+  if(diff<=0) tr.className="danger";
+  else if(diff<=3) tr.className="warn";
+
+  tr.innerHTML=`
+<td>${s.name}</td>
+<td>${s.phone}</td>
+<td>${s.email||"-"}</td>
+<td>${s.product}</td>
+<td>${s.price} دج</td>
+<td>${fmt(end)}</td>
+<td class="actions">
+<button onclick="renew(${s.id})">♻</button>
+<button onclick="delSub(${s.id})">🗑</button>
+</td>`;
+  list.appendChild(tr);
+ });
+}
+
+function renew(id){
+ let d=prompt("مدة التجديد بالأيام",30);
+ if(!d)return;
+ let s=subs.find(x=>x.id===id);
+ let e=new Date(s.end); e.setHours(0,0,0,0);
+ e.setDate(e.getDate()+Number(d));
+ s.end=e.toISOString(); save(); render();
+}
+
+function delSub(id){
+ if(confirm("تأكيد الحذف؟")){
+  subs=subs.filter(s=>s.id!==id);
+  save(); render();
+ }
+}
+
+render();
+</script>
+
+</body>
+</html>
