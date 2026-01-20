@@ -74,7 +74,7 @@ button{
 table{
  width:100%;
  border-collapse:collapse;
- min-width:850px;
+ min-width:950px;
 }
 
 th,td{
@@ -106,6 +106,18 @@ th{
  margin:2px;
  font-size:13px;
 }
+
+/* ⏳ خانة الأيام */
+.days-box{
+ padding:4px 8px;
+ border-radius:12px;
+ font-weight:bold;
+ display:inline-block;
+ min-width:45px;
+}
+.days-ok{background:#e8f5e9;color:#2e7d32}
+.days-warn{background:#fff3e0;color:#ef6c00}
+.days-expired{background:#fdecea;color:#c62828}
 
 @media(max-width:768px){
  body{padding:10px}
@@ -144,7 +156,7 @@ th{
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
- <input id="price" type="number" placeholder="السعر">
+ <input id="price" type="number" placeholder="السعر (دج)">
  <button onclick="addSub()">➕ إضافة اشتراك (30 يوم)</button>
 </div>
 
@@ -156,8 +168,9 @@ th{
  <th>الهاتف</th>
  <th>Email</th>
  <th>المنتج</th>
+ <th>السعر</th>
  <th>الانتهاء</th>
- <th>الأيام</th>
+ <th>⏳ الأيام</th>
  <th>مدفوع</th>
  <th>إجراءات</th>
 </tr>
@@ -185,14 +198,24 @@ function fmt(d){
  String(d.getDate()).padStart(2,"0");
 }
 
-function sendWhatsApp(phone,name,product,end,days){
- let msg=`مرحباً ${name}
-اشتراك ${product}
-${days<=0?"انتهى ❌":"سينتهي بعد "+days+" أيام"}
-📅 ${end}`;
+/* 💬 WhatsApp */
+function sendWhatsApp(phone,name,product,endDate,days){
+ let msg =
+`مرحباً ${name} 👋
+
+نود إعلامكم أن اشتراككم في خدمة ${product}
+${days <= 0 ? "قد انتهى ❌" : "سينتهي بتاريخ " + endDate + " ⏰"}
+⏳ عدد الأيام المتبقية: ${days}
+
+📌 في حال الرغبة في التجديد أو الاستفسار
+يرجى الرد على هذه الرسالة.
+
+شكراً لثقتكم بنا 🌟`;
+
  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
 }
 
+/* ➕ إضافة */
 function addSub(){
  if(
   name.value.trim()==="" ||
@@ -226,28 +249,38 @@ function addSub(){
  render();
 }
 
+/* ✔ دفع */
 function togglePaid(id){
  let s=subs.find(x=>x.id===id);
  s.paid=!s.paid;
  save();render();
 }
 
+/* ✏️ تعديل */
 function editSub(id){
  let s=subs.find(x=>x.id===id);
+
  let n=prompt("الاسم",s.name);
  if(!n) return;
+
  let p=prompt("الهاتف",s.phone);
  if(!p) return;
- s.name=n;s.phone=p;
+
+ let e=prompt("Email",s.email||"");
+ if(e===null) return;
+
+ s.name=n; s.phone=p; s.email=e;
  save();render();
 }
 
+/* 🗑 حذف */
 function deleteSub(id){
  if(!confirm("تأكيد الحذف؟")) return;
  subs=subs.filter(x=>x.id!==id);
  save();render();
 }
 
+/* 🔄 عرض */
 function render(){
  list.innerHTML="";
  let today=new Date();today.setHours(0,0,0,0);
@@ -282,8 +315,14 @@ function render(){
 <td>${s.phone}</td>
 <td>${s.email||"-"}</td>
 <td>${s.product}</td>
+<td>${s.price} دج</td>
 <td>${fmt(end)}</td>
-<td>${diff}</td>
+<td>
+ <span class="days-box ${
+   diff<0?'days-expired':
+   diff<=3?'days-warn':'days-ok'
+ }">${diff}</span>
+</td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
