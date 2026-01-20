@@ -6,41 +6,110 @@
 
 <style>
 :root{
- --bg:#f4f6f9;--card:#fff;--main:#1976d2;--text:#000;
- --warn:#fff3cd;--danger:#f8d7da;--unpaid:#fdecea;
+ --main:#1976d2;
+ --bg:#f4f6f9;
+ --card:#fff;
+ --warn:#fff3cd;
+ --danger:#f8d7da;
+ --unpaid:#fdecea;
 }
+
 body{
- font-family:Arial;background:var(--bg);color:var(--text);
- padding:20px
+ font-family:Arial;
+ background:var(--bg);
+ margin:0;
+ padding:15px;
 }
-h2{text-align:center;color:var(--main)}
+
+h2{
+ text-align:center;
+ color:var(--main);
+ margin-bottom:10px;
+}
+
 .card{
- background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px
+ background:var(--card);
+ padding:15px;
+ border-radius:8px;
+ margin-bottom:15px;
 }
+
 input,select,button{
- width:100%;padding:10px;margin:5px 0
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+ font-size:14px;
 }
+
 button{
- background:var(--main);color:#fff;border:none;cursor:pointer
+ background:var(--main);
+ color:#fff;
+ border:none;
+ border-radius:5px;
+ cursor:pointer;
 }
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ccc;padding:6px;text-align:center}
-th{background:var(--main);color:#fff}
+
+.filters, .stats{
+ display:flex;
+ gap:5px;
+ flex-wrap:wrap;
+}
+
+.filters button, .stats div{
+ flex:1;
+}
+
+.stats div{
+ background:#eef3fa;
+ padding:10px;
+ border-radius:6px;
+ text-align:center;
+ font-size:14px;
+}
+
+.table-wrapper{
+ overflow-x:auto;
+}
+
+table{
+ width:100%;
+ border-collapse:collapse;
+ min-width:850px;
+}
+
+th,td{
+ border:1px solid #ccc;
+ padding:6px;
+ text-align:center;
+ font-size:13px;
+ white-space:nowrap;
+}
+
+th{
+ background:var(--main);
+ color:#fff;
+}
+
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
 .unpaid{background:var(--unpaid)}
-.actions button{width:auto;margin:2px}
-.filters{display:flex;gap:5px;flex-wrap:wrap}
-.stats{display:flex;gap:10px;flex-wrap:wrap}
-.stat{flex:1;text-align:center}
-.table-wrapper{overflow-x:auto}
-@media(max-width:768px){
- table{min-width:900px}
-}
+
 .actions{
  position:sticky;
  right:0;
- background:var(--card)
+ background:#fff;
+ z-index:2;
+}
+
+.actions button{
+ padding:5px 8px;
+ margin:2px;
+ font-size:13px;
+}
+
+@media(max-width:768px){
+ body{padding:10px}
+ h2{font-size:18px}
 }
 </style>
 </head>
@@ -49,53 +118,48 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
-<!-- 🔍 البحث -->
 <input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
 
-<!-- 🔍 الفلاتر -->
 <div class="filters">
-  <button onclick="setFilter('all')">الكل</button>
-  <button onclick="setFilter('active')">نشط</button>
-  <button onclick="setFilter('expired')">منتهي</button>
-  <button onclick="setFilter('unpaid')">❌ غير مدفوع</button>
+ <button onclick="setFilter('all')">الكل</button>
+ <button onclick="setFilter('active')">نشط</button>
+ <button onclick="setFilter('expired')">منتهي</button>
+ <button onclick="setFilter('unpaid')">غير مدفوع</button>
 </div>
 
-<!-- 📊 الإحصائيات -->
 <div class="card stats">
-  <div class="stat">📦 الكل<br><b id="stTotal">0</b></div>
-  <div class="stat">🟢 نشط<br><b id="stActive">0</b></div>
-  <div class="stat">🔴 منتهي<br><b id="stExpired">0</b></div>
-  <div class="stat">❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
+ <div>📦 الكل<br><b id="stTotal">0</b></div>
+ <div>🟢 نشط<br><b id="stActive">0</b></div>
+ <div>🔴 منتهي<br><b id="stExpired">0</b></div>
+ <div>❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
 </div>
 
-<!-- ➕ إضافة -->
 <div class="card">
-  <input id="name" placeholder="اسم الزبون">
-  <input id="phone" placeholder="الهاتف">
-  <input id="email" placeholder="Email">
-  <select id="product">
-    <option value="">المنتج</option>
-    <option>Netflix</option>
-    <option>Shahid</option>
-    <option>IPTV</option>
-  </select>
-  <input id="price" type="number" placeholder="السعر">
-  <button onclick="addSub()">➕ إضافة اشتراك (30 يوم)</button>
+ <input id="name" placeholder="اسم الزبون">
+ <input id="phone" placeholder="الهاتف">
+ <input id="email" placeholder="Email">
+ <select id="product">
+  <option value="">المنتج</option>
+  <option>Netflix</option>
+  <option>Shahid</option>
+  <option>IPTV</option>
+ </select>
+ <input id="price" type="number" placeholder="السعر">
+ <button onclick="addSub()">➕ إضافة اشتراك (30 يوم)</button>
 </div>
 
-<!-- 📋 الجدول -->
 <div class="card table-wrapper">
 <table>
 <thead>
 <tr>
-<th>الاسم</th>
-<th>الهاتف</th>
-<th>Email</th>
-<th>المنتج</th>
-<th>الانتهاء</th>
-<th>الأيام</th>
-<th>مدفوع</th>
-<th>إجراءات</th>
+ <th>الاسم</th>
+ <th>الهاتف</th>
+ <th>Email</th>
+ <th>المنتج</th>
+ <th>الانتهاء</th>
+ <th>الأيام</th>
+ <th>مدفوع</th>
+ <th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -104,71 +168,86 @@ th{background:var(--main);color:#fff}
 
 <script>
 let subs = JSON.parse(localStorage.getItem("subs") || "[]");
-let currentFilter = "all";
+let currentFilter="all";
 
 function save(){
-  localStorage.setItem("subs", JSON.stringify(subs));
+ localStorage.setItem("subs",JSON.stringify(subs));
 }
 
-/* 💬 WhatsApp */
-function sendWhatsApp(phone,name,product,endDate,days){
-  const msg=`مرحباً ${name}
-اشتراك ${product}
-${days===0?"انتهى ❌":"سينتهي بعد "+days+" أيام"}
-📅 ${endDate}
-يرجى التواصل للتجديد`;
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
-}
-
-/* ➕ إضافة */
-function addSub(){
-  if(!name.value||!phone.value||!product.value||price.value<=0){
-    alert("يرجى ملء جميع الحقول");return;
-  }
-  let start=new Date();start.setHours(0,0,0,0);
-  let end=new Date(start);end.setDate(end.getDate()+30);
-
-  subs.push({
-    id:Date.now(),
-    name:name.value,
-    phone:phone.value,
-    email:email.value,
-    product:product.value,
-    price:price.value,
-    end:end.toISOString(),
-    paid:false,
-    n3:false,
-    n0:false
-  });
-
-  save();
-  name.value=phone.value=email.value=price.value="";
-  product.value="";
-  render();
-}
-
-/* 🔁 دفع */
-function togglePaid(id){
-  let s=subs.find(x=>x.id===id);
-  s.paid=!s.paid;
-  save();
-  render();
-}
-
-/* 🔍 فلترة */
 function setFilter(f){
-  currentFilter=f;
-  render();
+ currentFilter=f;
+ render();
 }
 
-/* 📅 */
 function fmt(d){
  return d.getFullYear()+"/"+
  String(d.getMonth()+1).padStart(2,"0")+"/"+
  String(d.getDate()).padStart(2,"0");
 }
 
-/* 🔄 عرض */
+function sendWhatsApp(phone,name,product,end,days){
+ let msg=`مرحباً ${name}
+اشتراك ${product}
+${days<=0?"انتهى ❌":"سينتهي بعد "+days+" أيام"}
+📅 ${end}`;
+ window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
+}
+
+function addSub(){
+ if(
+  name.value.trim()==="" ||
+  phone.value.trim()==="" ||
+  product.value==="" ||
+  Number(price.value)<=0
+ ){
+  alert("يرجى ملء جميع الحقول");
+  return;
+ }
+
+ let start=new Date();start.setHours(0,0,0,0);
+ let end=new Date(start);end.setDate(end.getDate()+30);
+
+ subs.push({
+  id:Date.now(),
+  name:name.value,
+  phone:phone.value,
+  email:email.value,
+  product:product.value,
+  price:price.value,
+  end:end.toISOString(),
+  paid:false,
+  n3:false,
+  n0:false
+ });
+
+ save();
+ name.value=phone.value=email.value=price.value="";
+ product.value="";
+ render();
+}
+
+function togglePaid(id){
+ let s=subs.find(x=>x.id===id);
+ s.paid=!s.paid;
+ save();render();
+}
+
+function editSub(id){
+ let s=subs.find(x=>x.id===id);
+ let n=prompt("الاسم",s.name);
+ if(!n) return;
+ let p=prompt("الهاتف",s.phone);
+ if(!p) return;
+ s.name=n;s.phone=p;
+ save();render();
+}
+
+function deleteSub(id){
+ if(!confirm("تأكيد الحذف؟")) return;
+ subs=subs.filter(x=>x.id!==id);
+ save();render();
+}
+
 function render(){
  list.innerHTML="";
  let today=new Date();today.setHours(0,0,0,0);
@@ -181,7 +260,7 @@ function render(){
   let diff=Math.floor((end-today)/86400000);
 
   total++;
-  if(diff<0) expired++; else active++;
+  diff<0?expired++:active++;
   if(!s.paid) unpaid++;
 
   if(currentFilter==="active" && diff<0) return;
@@ -190,19 +269,12 @@ function render(){
 
   if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))) return;
 
-  /* 🔔 WhatsApp تلقائي */
-  if(diff===3 && !s.n3){
-    sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-    s.n3=true;save();
-  }
-  if(diff===0 && !s.n0){
-    sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-    s.n0=true;save();
-  }
+  if(diff===3 && !s.n3){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n3=true;save();}
+  if(diff===0 && !s.n0){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n0=true;save();}
 
   let tr=document.createElement("tr");
-  if(diff<0) tr.className="danger";
-  else if(diff<=3) tr.className="warn";
+  if(diff<0) tr.classList.add("danger");
+  else if(diff<=3) tr.classList.add("warn");
   if(!s.paid) tr.classList.add("unpaid");
 
   tr.innerHTML=`
@@ -212,12 +284,11 @@ function render(){
 <td>${s.product}</td>
 <td>${fmt(end)}</td>
 <td>${diff}</td>
-<td>
-<input type="checkbox" ${s.paid?"checked":""}
- onclick="togglePaid(${s.id})">
-</td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
 <td class="actions">
-<button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
+ <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
+ <button onclick="editSub(${s.id})">✏️</button>
+ <button onclick="deleteSub(${s.id})">🗑</button>
 </td>`;
   list.appendChild(tr);
  });
