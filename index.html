@@ -91,9 +91,10 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-/* 🔐 PASSWORD */
+// ====== كلمة المرور ======
 const PASSWORD = "akli2525";
 
+// ====== Login ======
 const loginBox = document.getElementById("login");
 const appBox   = document.getElementById("app");
 
@@ -102,7 +103,9 @@ function login(){
     localStorage.setItem("auth","yes");
     loginBox.style.display="none";
     appBox.style.display="block";
-  }else alert("❌ كلمة المرور خاطئة");
+  }else{
+    alert("كلمة المرور خاطئة");
+  }
 }
 
 function logout(){
@@ -115,17 +118,17 @@ if(localStorage.getItem("auth")==="yes"){
   appBox.style.display="block";
 }
 
-/* 🌙 MODE */
-if(localStorage.getItem("dark")==="true")
+// ====== الوضع الليلي ======
+if(localStorage.getItem("dark")==="true"){
   document.body.classList.add("dark");
-
+}
 function toggleMode(){
   document.body.classList.toggle("dark");
   localStorage.setItem("dark",
     document.body.classList.contains("dark"));
 }
 
-/* 📦 DATA */
+// ====== البيانات ======
 const nameInput=document.getElementById("name");
 const phoneInput=document.getElementById("phone");
 const emailInput=document.getElementById("email");
@@ -135,10 +138,10 @@ const daysInput=document.getElementById("days");
 const searchInput=document.getElementById("search");
 const list=document.getElementById("list");
 
-let subs=JSON.parse(localStorage.getItem("subs")||"[]");
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
 
 function save(){
-  localStorage.setItem("subs",JSON.stringify(subs));
+  localStorage.setItem("subs", JSON.stringify(subs));
 }
 
 function fmt(d){
@@ -148,8 +151,10 @@ function fmt(d){
 }
 
 function add(){
- if(!nameInput.value||!phoneInput.value||!productInput.value||priceInput.value<=0||daysInput.value<=0)
- return alert("يرجى ملء جميع الحقول");
+ if(!nameInput.value || !phoneInput.value || !productInput.value || priceInput.value<=0 || daysInput.value<=0){
+   alert("يرجى ملء جميع الحقول");
+   return;
+ }
 
  let end=new Date();
  end.setHours(0,0,0,0);
@@ -162,8 +167,7 @@ function add(){
   email:emailInput.value,
   product:productInput.value,
   price:priceInput.value,
-  end:end.toISOString(),
-  notified:false
+  end:end.toISOString()
  });
 
  save(); render();
@@ -178,7 +182,7 @@ function render(){
  subs.sort((a,b)=>new Date(a.end)-new Date(b.end));
 
  subs.forEach(s=>{
-  if(q&&!`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))return;
+  if(q && !`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)) return;
 
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.ceil((end-today)/86400000);
@@ -190,7 +194,7 @@ function render(){
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
-<td>${s.email||"-"}</td>
+<td>${s.email || "-"}</td>
 <td>${s.product}</td>
 <td>${s.price} دج</td>
 <td>${fmt(end)}</td>
@@ -204,11 +208,13 @@ function render(){
 
 function renew(id){
  let d=prompt("مدة التجديد بالأيام",30);
- if(!d)return;
+ if(!d) return;
  let s=subs.find(x=>x.id===id);
- let e=new Date(s.end); e.setHours(0,0,0,0);
+ let e=new Date(s.end);
+ e.setHours(0,0,0,0);
  e.setDate(e.getDate()+Number(d));
- s.end=e.toISOString(); save(); render();
+ s.end=e.toISOString();
+ save(); render();
 }
 
 function delSub(id){
