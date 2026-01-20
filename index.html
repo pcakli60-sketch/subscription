@@ -49,13 +49,13 @@ button{
  cursor:pointer;
 }
 
-.filters, .stats{
+.filters,.stats{
  display:flex;
  gap:5px;
  flex-wrap:wrap;
 }
 
-.filters button, .stats div{
+.filters button,.stats div{
  flex:1;
 }
 
@@ -64,31 +64,25 @@ button{
  padding:10px;
  border-radius:6px;
  text-align:center;
- font-size:14px;
 }
 
-.table-wrapper{
- overflow-x:auto;
-}
+.table-wrapper{overflow-x:auto}
 
 table{
  width:100%;
  border-collapse:collapse;
- min-width:950px;
+ min-width:1000px;
 }
 
 th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
- font-size:13px;
  white-space:nowrap;
+ font-size:13px;
 }
 
-th{
- background:var(--main);
- color:#fff;
-}
+th{background:var(--main);color:#fff}
 
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
@@ -104,25 +98,17 @@ th{
 .actions button{
  padding:5px 8px;
  margin:2px;
- font-size:13px;
 }
 
-/* ⏳ خانة الأيام */
+/* ⏳ الأيام */
 .days-box{
  padding:4px 8px;
  border-radius:12px;
  font-weight:bold;
- display:inline-block;
- min-width:45px;
 }
 .days-ok{background:#e8f5e9;color:#2e7d32}
 .days-warn{background:#fff3e0;color:#ef6c00}
 .days-expired{background:#fdecea;color:#c62828}
-
-@media(max-width:768px){
- body{padding:10px}
- h2{font-size:18px}
-}
 </style>
 </head>
 
@@ -146,6 +132,7 @@ th{
  <div>❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
 </div>
 
+<!-- إضافة -->
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
  <input id="phone" placeholder="الهاتف">
@@ -157,9 +144,11 @@ th{
   <option>IPTV</option>
  </select>
  <input id="price" type="number" placeholder="السعر (دج)">
- <button onclick="addSub()">➕ إضافة اشتراك (30 يوم)</button>
+ <input id="days" type="number" placeholder="عدد أيام الاشتراك">
+ <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
+<!-- جدول -->
 <div class="card table-wrapper">
 <table>
 <thead>
@@ -180,7 +169,7 @@ th{
 </div>
 
 <script>
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let subs=JSON.parse(localStorage.getItem("subs")||"[]");
 let currentFilter="all";
 
 function save(){
@@ -188,8 +177,7 @@ function save(){
 }
 
 function setFilter(f){
- currentFilter=f;
- render();
+ currentFilter=f; render();
 }
 
 function fmt(d){
@@ -198,37 +186,34 @@ function fmt(d){
  String(d.getDate()).padStart(2,"0");
 }
 
-/* 💬 WhatsApp */
-function sendWhatsApp(phone,name,product,endDate,days){
- let msg =
+function sendWhatsApp(phone,name,product,end,days){
+ let msg=
 `مرحباً ${name} 👋
 
 نود إعلامكم أن اشتراككم في خدمة ${product}
-${days <= 0 ? "قد انتهى ❌" : "سينتهي بتاريخ " + endDate + " ⏰"}
+${days<=0?"قد انتهى ❌":"سينتهي بتاريخ "+end+" ⏰"}
 ⏳ عدد الأيام المتبقية: ${days}
 
-📌 في حال الرغبة في التجديد أو الاستفسار
-يرجى الرد على هذه الرسالة.
-
+يرجى الرد للتجديد.
 شكراً لثقتكم بنا 🌟`;
-
  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
 }
 
-/* ➕ إضافة */
 function addSub(){
  if(
-  name.value.trim()==="" ||
-  phone.value.trim()==="" ||
-  product.value==="" ||
-  Number(price.value)<=0
+  name.value.trim()===""||
+  phone.value.trim()===""||
+  product.value===""||
+  Number(price.value)<=0||
+  Number(days.value)<=0
  ){
   alert("يرجى ملء جميع الحقول");
   return;
  }
 
- let start=new Date();start.setHours(0,0,0,0);
- let end=new Date(start);end.setDate(end.getDate()+30);
+ let start=new Date(); start.setHours(0,0,0,0);
+ let end=new Date(start);
+ end.setDate(end.getDate()+Number(days.value));
 
  subs.push({
   id:Date.now(),
@@ -244,71 +229,59 @@ function addSub(){
  });
 
  save();
- name.value=phone.value=email.value=price.value="";
+ name.value=phone.value=email.value=price.value=days.value="";
  product.value="";
  render();
 }
 
-/* ✔ دفع */
 function togglePaid(id){
  let s=subs.find(x=>x.id===id);
- s.paid=!s.paid;
- save();render();
+ s.paid=!s.paid; save(); render();
 }
 
-/* ✏️ تعديل */
 function editSub(id){
  let s=subs.find(x=>x.id===id);
-
- let n=prompt("الاسم",s.name);
- if(!n) return;
-
- let p=prompt("الهاتف",s.phone);
- if(!p) return;
-
- let e=prompt("Email",s.email||"");
- if(e===null) return;
-
+ let n=prompt("الاسم",s.name); if(!n)return;
+ let p=prompt("الهاتف",s.phone); if(!p)return;
+ let e=prompt("Email",s.email||""); if(e===null)return;
  s.name=n; s.phone=p; s.email=e;
- save();render();
+ save(); render();
 }
 
-/* 🗑 حذف */
 function deleteSub(id){
- if(!confirm("تأكيد الحذف؟")) return;
+ if(!confirm("تأكيد الحذف؟"))return;
  subs=subs.filter(x=>x.id!==id);
- save();render();
+ save(); render();
 }
 
-/* 🔄 عرض */
 function render(){
  list.innerHTML="";
- let today=new Date();today.setHours(0,0,0,0);
+ let today=new Date(); today.setHours(0,0,0,0);
  let q=search.value.toLowerCase();
 
  let total=0,active=0,expired=0,unpaid=0;
 
  subs.forEach(s=>{
-  let end=new Date(s.end);end.setHours(0,0,0,0);
+  let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
   total++;
   diff<0?expired++:active++;
   if(!s.paid) unpaid++;
 
-  if(currentFilter==="active" && diff<0) return;
-  if(currentFilter==="expired" && diff>=0) return;
-  if(currentFilter==="unpaid" && s.paid) return;
+  if(currentFilter==="active" && diff<0)return;
+  if(currentFilter==="expired" && diff>=0)return;
+  if(currentFilter==="unpaid" && s.paid)return;
 
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q))) return;
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
 
   if(diff===3 && !s.n3){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n3=true;save();}
   if(diff===0 && !s.n0){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n0=true;save();}
 
   let tr=document.createElement("tr");
-  if(diff<0) tr.classList.add("danger");
-  else if(diff<=3) tr.classList.add("warn");
-  if(!s.paid) tr.classList.add("unpaid");
+  if(diff<0)tr.classList.add("danger");
+  else if(diff<=3)tr.classList.add("warn");
+  if(!s.paid)tr.classList.add("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
@@ -317,12 +290,9 @@ function render(){
 <td>${s.product}</td>
 <td>${s.price} دج</td>
 <td>${fmt(end)}</td>
-<td>
- <span class="days-box ${
-   diff<0?'days-expired':
-   diff<=3?'days-warn':'days-ok'
- }">${diff}</span>
-</td>
+<td><span class="days-box ${
+ diff<0?'days-expired':diff<=3?'days-warn':'days-ok'
+}">${diff}</span></td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
