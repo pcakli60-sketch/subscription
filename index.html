@@ -14,34 +14,89 @@
  --card:#ffffff;
  --unpaid:#fdecea;
 }
+
 body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
 h2{text-align:center;color:var(--main)}
-.card{background:var(--card);padding:15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
-input,select,button{width:100%;padding:10px;margin:5px 0;font-size:14px}
-button{border:none;border-radius:6px;cursor:pointer;color:#fff}
+
+.card{
+ background:var(--card);
+ padding:15px;
+ border-radius:10px;
+ margin-bottom:15px;
+ box-shadow:0 2px 6px rgba(0,0,0,.05)
+}
+
+input,select,button{
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+ font-size:14px
+}
+
+button{
+ border:none;
+ border-radius:6px;
+ cursor:pointer;
+ color:#fff
+}
+
 .main{background:var(--main)}
 .success{background:var(--success)}
 .warning{background:var(--warning)}
 .danger{background:var(--danger)}
 
-.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
-.filters button,.stats div{flex:1}
-.stats div{background:#eef3fa;padding:10px;border-radius:8px;text-align:center;font-weight:bold}
+.filters,.stats{
+ display:flex;
+ gap:5px;
+ flex-wrap:wrap
+}
 
-table{width:100%;border-collapse:collapse;min-width:1100px}
-th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
+.filters button,.stats div{flex:1}
+
+.stats div{
+ background:#eef3fa;
+ padding:10px;
+ border-radius:8px;
+ text-align:center;
+ font-weight:bold
+}
+
+table{
+ width:100%;
+ border-collapse:collapse;
+ min-width:1200px
+}
+
+th,td{
+ border:1px solid #ddd;
+ padding:6px;
+ text-align:center;
+ font-size:13px
+}
+
 th{background:var(--main);color:#fff}
 
-.warn{background:#fff3e0}
-.expired{background:#fdecea}
-.unpaid{background:var(--unpaid)}
+/* 🔴🟠🟢 تلوين الصفوف */
+.row-expired{background:#fdecea}
+.row-warn{background:#fff3e0}
+.row-ok{background:#e8f5e9}
+.row-unpaid{background:var(--unpaid)}
 
-.actions button{padding:5px 8px;margin:2px;font-size:13px}
+.days-box{
+ padding:4px 8px;
+ border-radius:12px;
+ font-weight:bold
+}
 
-.days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
-.days-ok{background:#e8f5e9;color:var(--success)}
-.days-warn{background:#fff3e0;color:var(--warning)}
-.days-expired{background:#fdecea;color:var(--danger)}
+.days-ok{background:#c8e6c9;color:var(--success)}
+.days-warn{background:#ffe0b2;color:var(--warning)}
+.days-expired{background:#ffcdd2;color:var(--danger)}
+
+.actions button{
+ padding:5px 8px;
+ margin:2px;
+ font-size:13px
+}
 
 .logout{background:var(--danger);width:auto;padding:6px 12px}
 .alert-btn{background:var(--warning);margin-bottom:10px}
@@ -66,7 +121,7 @@ th{background:var(--main);color:#fff}
  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
+<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل / Profil" onkeyup="render()">
 
 <div class="filters">
  <button class="main" onclick="setFilter('all')">الكل</button>
@@ -86,8 +141,9 @@ th{background:var(--main);color:#fff}
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
- <input id="phone" placeholder="الهاتف (مثال: 213xxxxxxxxx)">
+ <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
+ <input id="profile" placeholder="Profil">
  <select id="product">
   <option value="">الخدمة</option>
   <option>Netflix</option>
@@ -103,9 +159,16 @@ th{background:var(--main);color:#fff}
 <table>
 <thead>
 <tr>
- <th>الاسم</th><th>الهاتف</th><th>Email</th>
- <th>الخدمة</th><th>الانتهاء</th><th>⏳ الأيام</th>
- <th>مدفوع</th><th>إجراءات</th>
+ <th>الاسم</th>
+ <th>الهاتف</th>
+ <th>Email</th>
+ <th>Profil</th>
+ <th>الخدمة</th>
+ <th>السعر</th>
+ <th>الانتهاء</th>
+ <th>⏳ الأيام</th>
+ <th>مدفوع</th>
+ <th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -163,7 +226,7 @@ function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
-/* WHATSAPP (Emoji مضمون) */
+/* WHATSAPP (Emoji Unicode) */
 function sendWhatsApp(phone,name,product,end,days){
  let msg="";
  if(days < 0){
@@ -197,6 +260,7 @@ async function addSub(){
   name:$("name").value,
   phone:$("phone").value,
   email:$("email").value,
+  profile:$("profile").value,
   product:$("product").value,
   price:$("price").value,
   end:end.toISOString(),
@@ -212,6 +276,8 @@ async function editSub(id){
  await updateDoc(doc(db,"subs",id),{
   name:prompt("الاسم",s.name)||s.name,
   phone:prompt("الهاتف",s.phone)||s.phone,
+  email:prompt("Email",s.email)||s.email,
+  profile:prompt("Profil",s.profile)||s.profile,
   product:prompt("الخدمة",s.product)||s.product,
   price:prompt("السعر",s.price)||s.price
  });
@@ -243,7 +309,7 @@ async function togglePaid(id,val){
  loadSubs();
 }
 
-/* ALERTS (3 أيام + منتهي) */
+/* ALERTS */
 async function sendAlerts(){
  let today=new Date(); today.setHours(0,0,0,0);
  for(let s of subs){
@@ -274,18 +340,28 @@ function render(){
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
+
   t++; diff<0?e++:a++; if(!s.paid)u++;
+
   if(currentFilter==="active"&&diff<0)return;
   if(currentFilter==="expired"&&diff>=0)return;
   if(currentFilter==="unpaid"&&s.paid)return;
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
+  if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
+
+  if(!s.paid) tr.classList.add("row-unpaid");
+  else if(diff<0) tr.classList.add("row-expired");
+  else if(diff<=3) tr.classList.add("row-warn");
+  else tr.classList.add("row-ok");
+
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
 <td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td>
 <td>${s.product}</td>
+<td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
