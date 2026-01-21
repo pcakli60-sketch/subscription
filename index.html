@@ -198,13 +198,22 @@ function fmt(d){
  String(d.getDate()).padStart(2,"0");
 }
 
-function sendWhatsApp(phone,name,product,end,days){
+function sendWhatsApp(phone,name,product,end){
  let msg =
-`مرحباً ${name}
-اشتراك ${product}
-📅 ${end}
-⏳ الأيام المتبقية: ${days}`;
- window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+`مرحباً ${name} 👋
+
+نود إعلامكم أن اشتراككم في خدمة ${product}
+سينتهي بتاريخ ${end} ⏰
+
+📌 في حال الرغبة في التجديد أو الاستفسار
+يرجى الرد على هذه الرسالة.
+
+شكراً لثقتكم بنا 🌟`;
+
+ window.open(
+  "https://wa.me/"+phone+"?text="+encodeURIComponent(msg),
+  "_blank"
+ );
 }
 
 function addSub(){
