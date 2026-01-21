@@ -13,29 +13,30 @@
  --danger:#f8d7da;
  --unpaid:#fdecea;
 }
+
 body{
  font-family:Arial;
  background:var(--bg);
  margin:0;
  padding:15px;
 }
-h2{
- text-align:center;
- color:var(--main);
- margin-bottom:10px;
-}
+
+h2{text-align:center;color:var(--main)}
+
 .card{
  background:var(--card);
  padding:15px;
  border-radius:8px;
  margin-bottom:15px;
 }
+
 input,select,button{
  width:100%;
  padding:10px;
  margin:5px 0;
  font-size:14px;
 }
+
 button{
  background:var(--main);
  color:#fff;
@@ -43,59 +44,55 @@ button{
  border-radius:5px;
  cursor:pointer;
 }
+
 .filters,.stats{
  display:flex;
  gap:5px;
  flex-wrap:wrap;
 }
-.filters button,.stats div{flex:1}
+
 .stats div{
+ flex:1;
  background:#eef3fa;
  padding:10px;
  border-radius:6px;
  text-align:center;
 }
-.table-wrapper{overflow-x:auto}
+
 table{
  width:100%;
  border-collapse:collapse;
- min-width:1100px;
+ min-width:1000px;
 }
+
 th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
- white-space:nowrap;
  font-size:13px;
+ white-space:nowrap;
 }
+
 th{background:var(--main);color:#fff}
+
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
 .unpaid{background:var(--unpaid)}
-.actions{
- position:sticky;
- right:0;
- background:#fff;
- z-index:2;
-}
-.actions button{
- padding:5px 8px;
- margin:2px;
-}
-.days-box{
+
+.days{
  padding:4px 8px;
  border-radius:12px;
  font-weight:bold;
 }
-.days-ok{background:#e8f5e9;color:#2e7d32}
-.days-warn{background:#fff3e0;color:#ef6c00}
-.days-expired{background:#fdecea;color:#c62828}
+.ok{background:#e8f5e9;color:#2e7d32}
+.warnDays{background:#fff3e0;color:#ef6c00}
+.expired{background:#fdecea;color:#c62828}
 </style>
 </head>
 
 <body>
 
-<h2>إدارة الاشتراكات</h2>
+<h2>📊 إدارة الاشتراكات</h2>
 
 <input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
 
@@ -104,6 +101,7 @@ th{background:var(--main);color:#fff}
  <button onclick="setFilter('active')">نشط</button>
  <button onclick="setFilter('expired')">منتهي</button>
  <button onclick="setFilter('unpaid')">غير مدفوع</button>
+ <button onclick="toggleNotify()">🔔 التنبيهات</button>
 </div>
 
 <div class="card stats">
@@ -115,28 +113,30 @@ th{background:var(--main);color:#fff}
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
- <input id="phone" placeholder="الهاتف">
+ <input id="phone" type="tel" placeholder="الهاتف">
  <input id="email" placeholder="Email">
- <input id="profil" placeholder="Profil (اختياري)">
  <select id="product">
   <option value="">المنتج</option>
   <option>Netflix</option>
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
- <input id="price" type="number" placeholder="السعر (دج)">
- <input id="days" type="number" placeholder="عدد أيام الاشتراك">
+ <input id="price" type="number" placeholder="السعر">
+ <input id="days" type="number" placeholder="عدد الأيام">
  <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
-<div class="card table-wrapper">
+<div class="card">
+ <button onclick="exportData()">📤 تصدير نسخة</button>
+ <input type="file" onchange="importData(this)" />
+</div>
+
+<div class="card" style="overflow:auto">
 <table>
 <thead>
 <tr>
  <th>الاسم</th>
  <th>الهاتف</th>
- <th>Email</th>
- <th>Profil</th>
  <th>المنتج</th>
  <th>السعر</th>
  <th>الانتهاء</th>
@@ -150,162 +150,109 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-const nameInput   = document.getElementById("name");
-const phoneInput  = document.getElementById("phone");
-const emailInput  = document.getElementById("email");
-const profilInput = document.getElementById("profil");
-const productInput= document.getElementById("product");
-const priceInput  = document.getElementById("price");
-const daysInput   = document.getElementById("days");
-const searchInput = document.getElementById("search");
-const list        = document.getElementById("list");
+let subs=JSON.parse(localStorage.getItem("subs")||"[]");
+let filter="all";
+let notify=false;
 
-const stTotal   = document.getElementById("stTotal");
-const stActive  = document.getElementById("stActive");
-const stExpired = document.getElementById("stExpired");
-const stUnpaid  = document.getElementById("stUnpaid");
+const qs=id=>document.getElementById(id);
+const safe=t=>t.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
 
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
-let currentFilter="all";
-
-function save(){
- localStorage.setItem("subs",JSON.stringify(subs));
-}
-
-function setFilter(f){
- currentFilter=f;
- render();
-}
-
-function fmt(d){
- return d.getFullYear()+"/"+
- String(d.getMonth()+1).padStart(2,"0")+"/"+
- String(d.getDate()).padStart(2,"0");
-}
+function save(){localStorage.setItem("subs",JSON.stringify(subs));}
+function setFilter(f){filter=f;render();}
+function toggleNotify(){notify=!notify;alert(notify?"تم تفعيل التنبيهات":"تم إيقاف التنبيهات");}
 
 function addSub(){
- if(
-  nameInput.value.trim()==="" ||
-  phoneInput.value.trim()==="" ||
-  productInput.value==="" ||
-  Number(priceInput.value)<=0 ||
-  Number(daysInput.value)<=0
- ){
-  alert("يرجى ملء جميع الحقول");
-  return;
- }
-
- let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start);
- end.setDate(end.getDate()+Number(daysInput.value));
-
+ if(!name.value||!phone.value||!product.value||days.value<=0)return alert("أكمل البيانات");
+ let start=new Date();start.setHours(0,0,0,0);
+ let end=new Date(start);end.setDate(end.getDate()+Number(days.value));
  subs.push({
   id:Date.now(),
-  name:nameInput.value,
-  phone:phoneInput.value,
-  email:emailInput.value,
-  profil:profilInput.value,
-  product:productInput.value,
-  price:priceInput.value,
+  name:safe(name.value),
+  phone:safe(phone.value),
+  product:product.value,
+  price:price.value,
   end:end.toISOString(),
-  paid:false,
-  n3:false,
-  n0:false
+  paid:false,n3:false,n0:false
  });
-
- save();
- nameInput.value=phoneInput.value=emailInput.value=profilInput.value=priceInput.value=daysInput.value="";
- productInput.value="";
- render();
+ save();location.reload();
 }
 
-function togglePaid(id){
+function renew(id){
+ let d=prompt("عدد أيام التجديد"); if(!d)return;
  let s=subs.find(x=>x.id===id);
- s.paid=!s.paid;
- save(); render();
-}
-
-function editSub(id){
- let s=subs.find(x=>x.id===id);
-
- let n=prompt("الاسم",s.name); if(n===null)return;
- let p=prompt("الهاتف",s.phone); if(p===null)return;
- let e=prompt("Email",s.email||""); if(e===null)return;
- let pr=prompt("Profil",s.profil||""); if(pr===null)return;
- let prod=prompt("المنتج",s.product); if(prod===null)return;
- let price=prompt("السعر",s.price); if(price===null)return;
-
- s.name=n;
- s.phone=p;
- s.email=e;
- s.profil=pr;
- s.product=prod;
- s.price=price;
-
- save(); render();
-}
-
-function deleteSub(id){
- if(!confirm("تأكيد الحذف؟"))return;
- subs=subs.filter(x=>x.id!==id);
- save(); render();
+ let e=new Date(s.end); e.setDate(e.getDate()+Number(d));
+ s.end=e.toISOString(); s.n3=s.n0=false;
+ save();render();
 }
 
 function render(){
- list.innerHTML="";
- let today=new Date(); today.setHours(0,0,0,0);
- let q=searchInput.value.toLowerCase();
+ let list=qs("list"); list.innerHTML="";
+ let today=new Date();today.setHours(0,0,0,0);
+ subs.sort((a,b)=>new Date(a.end)-new Date(b.end));
 
- let total=0,active=0,expired=0,unpaid=0;
+ let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
-  total++;
-  diff<0?expired++:active++;
-  if(!s.paid) unpaid++;
+  t++; diff<0?e++:a++; if(!s.paid)u++;
 
-  if(currentFilter==="active" && diff<0)return;
-  if(currentFilter==="expired" && diff>=0)return;
-  if(currentFilter==="unpaid" && s.paid)return;
+  if(filter==="active"&&diff<0)return;
+  if(filter==="expired"&&diff>=0)return;
+  if(filter==="unpaid"&&s.paid)return;
 
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
+  if(notify){
+   if(diff===3&&!s.n3){send(s,diff);s.n3=true}
+   if(diff===0&&!s.n0){send(s,diff);s.n0=true}
+  }
 
-  let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
+  let cls=diff<0?"expired":diff<=3?"warnDays":"ok";
 
-  tr.innerHTML=`
+  list.innerHTML+=`
+<tr class="${diff<0?'danger':diff<=3?'warn':''} ${!s.paid?'unpaid':''}">
 <td>${s.name}</td>
 <td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.profil||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price} دج</td>
-<td>${fmt(end)}</td>
+<td>${s.price}</td>
+<td>${end.toLocaleDateString()}</td>
+<td><span class="days ${cls}">${diff}</span></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="s=subs.find(x=>x.id===${s.id});s.paid=!s.paid;save();render()"></td>
 <td>
- <span class="days-box ${
-  diff<0?'days-expired':diff<=3?'days-warn':'days-ok'
- }">${diff}</span>
+<button onclick="send(subs.find(x=>x.id===${s.id}),${diff})">💬</button>
+<button onclick="renew(${s.id})">♻️</button>
+<button onclick="subs=subs.filter(x=>x.id!==${s.id});save();render()">🗑</button>
 </td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
-<td class="actions">
- <button onclick="editSub(${s.id})">✏️</button>
- <button onclick="deleteSub(${s.id})">🗑</button>
-</td>`;
-  list.appendChild(tr);
+</tr>`;
  });
 
- stTotal.textContent=total;
- stActive.textContent=active;
- stExpired.textContent=expired;
- stUnpaid.textContent=unpaid;
+ stTotal.textContent=t;
+ stActive.textContent=a;
+ stExpired.textContent=e;
+ stUnpaid.textContent=u;
+}
+
+function send(s,d){
+ let msg=`مرحباً ${s.name}
+اشتراك ${s.product}
+${d<=0?"منتهي":"ينتهي قريباً"}
+الأيام: ${d}`;
+ window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(msg)}`);
+}
+
+function exportData(){
+ let b=new Blob([JSON.stringify(subs)],{type:"application/json"});
+ let a=document.createElement("a");
+ a.href=URL.createObjectURL(b); a.download="backup.json"; a.click();
+}
+
+function importData(i){
+ let r=new FileReader();
+ r.onload=()=>{subs=JSON.parse(r.result);save();render();}
+ r.readAsText(i.files[0]);
 }
 
 render();
 </script>
-
 </body>
 </html>
