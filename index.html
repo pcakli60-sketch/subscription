@@ -156,21 +156,20 @@ th{background:var(--main);color:#fff}
 
 <script>
 const $ = id => document.getElementById(id);
-
 let subs = JSON.parse(localStorage.getItem("subs") || "[]");
 let currentFilter="all";
 
-function save(){localStorage.setItem("subs",JSON.stringify(subs));}
-function setFilter(f){currentFilter=f;render();}
+function save(){ localStorage.setItem("subs",JSON.stringify(subs)); }
+function setFilter(f){ currentFilter=f; render(); }
 
 function fmt(d){
- return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
+ return d.getFullYear()+"/"+
+ String(d.getMonth()+1).padStart(2,"0")+"/"+
+ String(d.getDate()).padStart(2,"0");
 }
 
 function sendWhatsApp(phone,name,product,end,days){
- let msg="";
- if(days>=0){
-  msg=
+ let msg = days>=0 ?
 `مرحباً ${name} 👋
 
 نود إعلامكم أن اشتراككم في خدمة ${product}
@@ -181,30 +180,42 @@ function sendWhatsApp(phone,name,product,end,days){
 📌 في حال الرغبة في التجديد أو الاستفسار
 يرجى الرد على هذه الرسالة.
 
-نحن في خدمتكم دائماً 🌟`;
- }else{
-  msg=
+نحن في خدمتكم دائماً 🌟`
+:
 `مرحباً ${name} 👋
 
 نود إعلامكم أن اشتراككم في خدمة ${product}
 قد انتهى بتاريخ ${end} ❌
 
-📌 في حال الرغبة في إعادة تفعيل الاشتراك
+📌 في حال الرغبة في إعادة التفعيل
 يرجى الرد على هذه الرسالة.
 
 نحن في خدمتكم دائماً 🌟`;
- }
+
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
 function addSub(){
- let name=$("name").value, phone=$("phone").value, email=$("email").value,
- product=$("product").value, price=$("price").value, days=$("days").value;
- if(!name||!phone||!product||days<=0) return alert("املأ الحقول");
+ let name=$("name").value.trim(),
+ phone=$("phone").value.trim(),
+ email=$("email").value.trim(),
+ product=$("product").value,
+ price=$("price").value,
+ days=Number($("days").value);
+
+ if(!name||!phone||!product||days<=0){
+  alert("يرجى ملء الحقول الأساسية");
+  return;
+ }
+
  let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start); end.setDate(end.getDate()+Number(days));
+ let end=new Date(start); end.setDate(end.getDate()+days);
+
  subs.push({id:Date.now(),name,phone,email,product,price,end:end.toISOString(),paid:false});
- save(); location.reload();
+ save();
+ $("name").value=$("phone").value=$("email").value=$("price").value=$("days").value="";
+ $("product").value="";
+ render();
 }
 
 function editSub(id){
@@ -217,11 +228,13 @@ function editSub(id){
 
 function renewSub(id){
  let s=subs.find(x=>x.id===id);
- let d=prompt("عدد أيام التجديد:");
- if(!d||isNaN(d)||d<=0)return;
- let end=new Date(s.end), today=new Date();
+ let d=Number(prompt("عدد أيام التجديد:"));
+ if(!d||d<=0) return;
+
+ let end=new Date(s.end);
+ let today=new Date(); today.setHours(0,0,0,0);
  if(end<today) end=today;
- end.setDate(end.getDate()+Number(d));
+ end.setDate(end.getDate()+d);
  s.end=end.toISOString();
  save(); render();
  sendWhatsApp(s.phone,s.name,s.product,fmt(end),d);
@@ -229,19 +242,20 @@ function renewSub(id){
 
 function sendGroup(type){
  let today=new Date(); today.setHours(0,0,0,0);
- let list=subs.filter(s=>{
+ let targets=subs.filter(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
   if(type==="active" && diff<0) return false;
   if(type==="expired" && diff>=0) return false;
   return true;
  });
- if(!list.length) return alert("ما كاش مشتركين");
- if(!confirm("راح تبعث رسائل لـ "+list.length+" مشترك")) return;
- list.forEach((s,i)=>{
+ if(!targets.length){ alert("ما كاش زبائن"); return; }
+ if(!confirm("سيتم فتح WhatsApp لـ "+targets.length+" زبون")) return;
+
+ targets.forEach((s,i)=>{
   let end=new Date(s.end);
   let diff=Math.floor((end-today)/86400000);
-  setTimeout(()=>sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff),i*1200);
+  setTimeout(()=>sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff),i*1500);
  });
 }
 
@@ -249,6 +263,7 @@ function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
  let q=$("search").value.toLowerCase();
+
  let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
@@ -256,15 +271,16 @@ function render(){
   let diff=Math.floor((end-today)/86400000);
 
   t++; diff<0?e++:a++; if(!s.paid)u++;
-  if(currentFilter==="active"&&diff<0)return;
-  if(currentFilter==="expired"&&diff>=0)return;
-  if(currentFilter==="unpaid"&&s.paid)return;
-  if(q&&!(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
+
+  if(currentFilter==="active" && diff<0)return;
+  if(currentFilter==="expired" && diff>=0)return;
+  if(currentFilter==="unpaid" && s.paid)return;
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
+  if(diff<0) tr.classList.add("danger");
+  else if(diff<=3) tr.classList.add("warn");
+  if(!s.paid) tr.classList.add("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
@@ -274,7 +290,8 @@ function render(){
 <td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="s.paid=!s.paid;save();render()"></td>
+<td><input type="checkbox" ${s.paid?"checked":""}
+ onclick="s.paid=!s.paid;save();render()"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
  <button onclick="editSub(${s.id})">✏️</button>
