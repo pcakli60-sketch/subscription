@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام إدارة الاشتراكات</title>
+<title>إدارة الاشتراكات</title>
 
 <style>
 :root{
@@ -13,82 +13,22 @@
  --danger:#f8d7da;
  --unpaid:#fdecea;
 }
-body{
- font-family:Arial;
- background:var(--bg);
- margin:0;
- padding:15px;
-}
-h2{
- text-align:center;
- color:var(--main);
- margin-bottom:10px;
-}
-.card{
- background:var(--card);
- padding:15px;
- border-radius:8px;
- margin-bottom:15px;
-}
-input,select,button{
- width:100%;
- padding:10px;
- margin:5px 0;
- font-size:14px;
-}
-button{
- background:var(--main);
- color:#fff;
- border:none;
- border-radius:5px;
- cursor:pointer;
-}
-.filters,.stats{
- display:flex;
- gap:5px;
- flex-wrap:wrap;
-}
-.filters button,.stats div{
- flex:1;
-}
-.stats div{
- background:#eef3fa;
- padding:10px;
- border-radius:6px;
- text-align:center;
-}
-.table-wrapper{overflow-x:auto}
-table{
- width:100%;
- border-collapse:collapse;
- min-width:1100px;
-}
-th,td{
- border:1px solid #ccc;
- padding:6px;
- text-align:center;
- white-space:nowrap;
- font-size:13px;
-}
+body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
+h2{text-align:center;color:var(--main)}
+.card{background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px}
+input,select,button{width:100%;padding:10px;margin:5px 0;font-size:14px}
+button{background:var(--main);color:#fff;border:none;border-radius:5px;cursor:pointer}
+.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
+.filters button,.stats div{flex:1}
+.stats div{background:#eef3fa;padding:10px;border-radius:6px;text-align:center}
+table{width:100%;border-collapse:collapse;min-width:1200px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;font-size:13px}
 th{background:var(--main);color:#fff}
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
 .unpaid{background:var(--unpaid)}
-.actions{
- position:sticky;
- right:0;
- background:#fff;
- z-index:2;
-}
-.actions button{
- padding:5px 8px;
- margin:2px;
-}
-.days-box{
- padding:4px 8px;
- border-radius:12px;
- font-weight:bold;
-}
+.actions button{padding:5px 8px;margin:2px}
+.days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
 .days-ok{background:#e8f5e9;color:#2e7d32}
 .days-warn{background:#fff3e0;color:#ef6c00}
 .days-expired{background:#fdecea;color:#c62828}
@@ -99,18 +39,13 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
+<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل / Profil" onkeyup="render()">
 
 <div class="filters">
  <button onclick="setFilter('all')">الكل</button>
  <button onclick="setFilter('active')">نشط</button>
  <button onclick="setFilter('expired')">منتهي</button>
  <button onclick="setFilter('unpaid')">غير مدفوع</button>
-</div>
-
-<div class="card">
- <button onclick="sendGroup('active')">📩 رسالة للمفعّلين</button>
- <button onclick="sendGroup('expired')">📩 رسالة للمنتهيين</button>
 </div>
 
 <div class="card stats">
@@ -124,24 +59,26 @@ th{background:var(--main);color:#fff}
  <input id="name" placeholder="اسم الزبون">
  <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
+ <input id="profile" placeholder="Profil (اختياري)">
  <select id="product">
   <option value="">المنتج</option>
   <option>Netflix</option>
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
- <input id="price" type="number" placeholder="السعر (دج)">
+ <input id="price" type="number" placeholder="السعر">
  <input id="days" type="number" placeholder="عدد أيام الاشتراك">
  <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
-<div class="card table-wrapper">
+<div class="card">
 <table>
 <thead>
 <tr>
  <th>الاسم</th>
  <th>الهاتف</th>
  <th>Email</th>
+ <th>Profil</th>
  <th>المنتج</th>
  <th>السعر</th>
  <th>الانتهاء</th>
@@ -156,40 +93,25 @@ th{background:var(--main);color:#fff}
 
 <script>
 const $ = id => document.getElementById(id);
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let subs = JSON.parse(localStorage.getItem("subs")||"[]");
 let currentFilter="all";
 
-function save(){ localStorage.setItem("subs",JSON.stringify(subs)); }
-function setFilter(f){ currentFilter=f; render(); }
+function save(){localStorage.setItem("subs",JSON.stringify(subs));}
+function setFilter(f){currentFilter=f;render();}
 
 function fmt(d){
- return d.getFullYear()+"/"+
- String(d.getMonth()+1).padStart(2,"0")+"/"+
- String(d.getDate()).padStart(2,"0");
+ return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
 function sendWhatsApp(phone,name,product,end,days){
- let msg = days>=0 ?
+ let msg =
 `مرحباً ${name} 👋
 
-نود إعلامكم أن اشتراككم في خدمة ${product}
-سينتهي بتاريخ ${end} ⏰
+اشتراكك في خدمة ${product}
+${days>=0 ? "سينتهي بتاريخ "+end+" ⏰\n⏳ الأيام المتبقية: "+days+" أيام"
+: "قد انتهى بتاريخ "+end+" ❌"}
 
-⏳ عدد الأيام المتبقية: ${days} أيام
-
-📌 في حال الرغبة في التجديد أو الاستفسار
-يرجى الرد على هذه الرسالة.
-
-نحن في خدمتكم دائماً 🌟`
-:
-`مرحباً ${name} 👋
-
-نود إعلامكم أن اشتراككم في خدمة ${product}
-قد انتهى بتاريخ ${end} ❌
-
-📌 في حال الرغبة في إعادة التفعيل
-يرجى الرد على هذه الرسالة.
-
+يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
 نحن في خدمتكم دائماً 🌟`;
 
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
@@ -199,23 +121,18 @@ function addSub(){
  let name=$("name").value.trim(),
  phone=$("phone").value.trim(),
  email=$("email").value.trim(),
+ profile=$("profile").value.trim(),
  product=$("product").value,
  price=$("price").value,
  days=Number($("days").value);
 
- if(!name||!phone||!product||days<=0){
-  alert("يرجى ملء الحقول الأساسية");
-  return;
- }
+ if(!name||!phone||!product||days<=0) return alert("املأ الحقول الأساسية");
 
  let start=new Date(); start.setHours(0,0,0,0);
  let end=new Date(start); end.setDate(end.getDate()+days);
 
- subs.push({id:Date.now(),name,phone,email,product,price,end:end.toISOString(),paid:false});
- save();
- $("name").value=$("phone").value=$("email").value=$("price").value=$("days").value="";
- $("product").value="";
- render();
+ subs.push({id:Date.now(),name,phone,email,profile,product,price,end:end.toISOString(),paid:false});
+ save(); render();
 }
 
 function editSub(id){
@@ -223,13 +140,15 @@ function editSub(id){
  s.name=prompt("الاسم",s.name)||s.name;
  s.phone=prompt("الهاتف",s.phone)||s.phone;
  s.email=prompt("Email",s.email)||s.email;
+ s.profile=prompt("Profil",s.profile)||s.profile;
+ s.price=prompt("السعر",s.price)||s.price;
  save(); render();
 }
 
 function renewSub(id){
  let s=subs.find(x=>x.id===id);
- let d=Number(prompt("عدد أيام التجديد:"));
- if(!d||d<=0) return;
+ let d=Number(prompt("عدد أيام التجديد"));
+ if(!d||d<=0)return;
 
  let end=new Date(s.end);
  let today=new Date(); today.setHours(0,0,0,0);
@@ -240,30 +159,10 @@ function renewSub(id){
  sendWhatsApp(s.phone,s.name,s.product,fmt(end),d);
 }
 
-function sendGroup(type){
- let today=new Date(); today.setHours(0,0,0,0);
- let targets=subs.filter(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-  if(type==="active" && diff<0) return false;
-  if(type==="expired" && diff>=0) return false;
-  return true;
- });
- if(!targets.length){ alert("ما كاش زبائن"); return; }
- if(!confirm("سيتم فتح WhatsApp لـ "+targets.length+" زبون")) return;
-
- targets.forEach((s,i)=>{
-  let end=new Date(s.end);
-  let diff=Math.floor((end-today)/86400000);
-  setTimeout(()=>sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff),i*1500);
- });
-}
-
 function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
  let q=$("search").value.toLowerCase();
-
  let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
@@ -272,31 +171,30 @@ function render(){
 
   t++; diff<0?e++:a++; if(!s.paid)u++;
 
-  if(currentFilter==="active" && diff<0)return;
-  if(currentFilter==="expired" && diff>=0)return;
-  if(currentFilter==="unpaid" && s.paid)return;
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
+  if(currentFilter==="active"&&diff<0)return;
+  if(currentFilter==="expired"&&diff>=0)return;
+  if(currentFilter==="unpaid"&&s.paid)return;
+  if(q&&!(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
-  if(diff<0) tr.classList.add("danger");
-  else if(diff<=3) tr.classList.add("warn");
-  if(!s.paid) tr.classList.add("unpaid");
+  if(diff<0)tr.classList.add("danger");
+  else if(diff<=3)tr.classList.add("warn");
+  if(!s.paid)tr.classList.add("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
 <td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td>
 <td>${s.product}</td>
 <td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""}
- onclick="s.paid=!s.paid;save();render()"></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="s.paid=!s.paid;save();render()"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
  <button onclick="editSub(${s.id})">✏️</button>
  <button onclick="renewSub(${s.id})">🔄</button>
- <button onclick="subs=subs.filter(x=>x.id!==${s.id});save();render()">🗑</button>
 </td>`;
   $("list").appendChild(tr);
  });
@@ -306,7 +204,6 @@ function render(){
  $("stExpired").textContent=e;
  $("stUnpaid").textContent=u;
 }
-
 render();
 </script>
 
