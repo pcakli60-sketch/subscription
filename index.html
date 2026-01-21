@@ -93,11 +93,11 @@ th{background:var(--main);color:#fff}
 
 <script>
 const $ = id => document.getElementById(id);
-let subs = JSON.parse(localStorage.getItem("subs")||"[]");
-let currentFilter="all";
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let currentFilter = "all";
 
-function save(){localStorage.setItem("subs",JSON.stringify(subs));}
-function setFilter(f){currentFilter=f;render();}
+function save(){ localStorage.setItem("subs", JSON.stringify(subs)); }
+function setFilter(f){ currentFilter = f; render(); }
 
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
@@ -126,13 +126,19 @@ function addSub(){
  price=$("price").value,
  days=Number($("days").value);
 
- if(!name||!phone||!product||days<=0) return alert("املأ الحقول الأساسية");
+ if(!name||!phone||!product||days<=0){
+  alert("يرجى ملء الحقول الأساسية");
+  return;
+ }
 
  let start=new Date(); start.setHours(0,0,0,0);
  let end=new Date(start); end.setDate(end.getDate()+days);
 
  subs.push({id:Date.now(),name,phone,email,profile,product,price,end:end.toISOString(),paid:false});
- save(); render();
+ save();
+ ["name","phone","email","profile","price","days"].forEach(i=>$(i).value="");
+ $("product").value="";
+ render();
 }
 
 function editSub(id){
@@ -155,31 +161,45 @@ function renewSub(id){
  if(end<today) end=today;
  end.setDate(end.getDate()+d);
  s.end=end.toISOString();
+
  save(); render();
- sendWhatsApp(s.phone,s.name,s.product,fmt(end),d);
+
+ let diff=Math.floor((end-today)/86400000);
+ sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+}
+
+function deleteSub(id){
+ if(!confirm("تأكيد حذف هذا العميل؟")) return;
+ subs = subs.filter(x=>x.id!==id);
+ save(); render();
 }
 
 function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
  let q=$("search").value.toLowerCase();
+
  let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
-  t++; diff<0?e++:a++; if(!s.paid)u++;
+  t++;
+  if(diff<0) e++; else a++;
+  if(!s.paid) u++;
 
-  if(currentFilter==="active"&&diff<0)return;
-  if(currentFilter==="expired"&&diff>=0)return;
-  if(currentFilter==="unpaid"&&s.paid)return;
-  if(q&&!(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
+  if(currentFilter==="active" && diff<0) return;
+  if(currentFilter==="expired" && diff>=0) return;
+  if(currentFilter==="unpaid" && s.paid) return;
+  if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q))) return;
 
   let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
+  if(diff<0) tr.classList.add("danger");
+  else if(diff<=3) tr.classList.add("warn");
+
+  if(!s.paid) tr.classList.add("unpaid");
+  else tr.classList.remove("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
@@ -190,11 +210,13 @@ function render(){
 <td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="s.paid=!s.paid;save();render()"></td>
+<td><input type="checkbox" ${s.paid?"checked":""}
+ onclick="s.paid=!s.paid;save();render()"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
  <button onclick="editSub(${s.id})">✏️</button>
  <button onclick="renewSub(${s.id})">🔄</button>
+ <button onclick="deleteSub(${s.id})">🗑</button>
 </td>`;
   $("list").appendChild(tr);
  });
@@ -204,6 +226,7 @@ function render(){
  $("stExpired").textContent=e;
  $("stUnpaid").textContent=u;
 }
+
 render();
 </script>
 
