@@ -24,7 +24,6 @@ body{
 h2{
  text-align:center;
  color:var(--main);
- margin-bottom:10px;
 }
 
 .card{
@@ -36,7 +35,7 @@ h2{
 
 input,select,button{
  width:100%;
-remember padding:10px;
+ padding:10px;
  margin:5px 0;
  font-size:14px;
 }
@@ -55,15 +54,12 @@ button{
  flex-wrap:wrap;
 }
 
-.filters button,.stats div{
- flex:1;
-}
-
 .stats div{
  background:#eef3fa;
  padding:10px;
  border-radius:6px;
  text-align:center;
+ flex:1;
 }
 
 .table-wrapper{overflow-x:auto}
@@ -71,7 +67,7 @@ button{
 table{
  width:100%;
  border-collapse:collapse;
- min-width:1100px;
+ min-width:1200px;
 }
 
 th,td{
@@ -92,7 +88,6 @@ th{background:var(--main);color:#fff}
  position:sticky;
  right:0;
  background:#fff;
- z-index:2;
 }
 
 .actions button{
@@ -100,7 +95,6 @@ th{background:var(--main);color:#fff}
  margin:2px;
 }
 
-/* الأيام */
 .days-box{
  padding:4px 8px;
  border-radius:12px;
@@ -116,14 +110,7 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
-
-<div class="filters">
- <button onclick="setFilter('all')">الكل</button>
- <button onclick="setFilter('active')">نشط</button>
- <button onclick="setFilter('expired')">منتهي</button>
- <button onclick="setFilter('unpaid')">غير مدفوع</button>
-</div>
+<input id="search" placeholder="بحث..." onkeyup="render()">
 
 <div class="card stats">
  <div>📦 الكل<br><b id="stTotal">0</b></div>
@@ -137,15 +124,10 @@ th{background:var(--main);color:#fff}
  <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
  <input id="profile" placeholder="Profil (اختياري)">
- <select id="product">
-  <option value="">المنتج</option>
-  <option>Netflix</option>
-  <option>Shahid</option>
-  <option>IPTV</option>
- </select>
- <input id="price" type="number" placeholder="السعر (دج)">
- <input id="days" type="number" placeholder="عدد أيام الاشتراك">
- <button onclick="addSub()">➕ إضافة اشتراك</button>
+ <input id="product" placeholder="المنتج">
+ <input id="price" type="number" placeholder="السعر">
+ <input id="days" type="number" placeholder="أيام الاشتراك">
+ <button onclick="addSub()">➕ إضافة</button>
 </div>
 
 <div class="card table-wrapper">
@@ -169,171 +151,111 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-const nameInput   = document.getElementById("name");
-const phoneInput  = document.getElementById("phone");
-const emailInput  = document.getElementById("email");
-const profileInput= document.getElementById("profile");
-const productInput= document.getElementById("product");
-const priceInput  = document.getElementById("price");
-const daysInput   = document.getElementById("days");
-const searchInput = document.getElementById("search");
-const list        = document.getElementById("list");
+const $ = id => document.getElementById(id);
 
-const stTotal   = document.getElementById("stTotal");
-const stActive  = document.getElementById("stActive");
-const stExpired = document.getElementById("stExpired");
-const stUnpaid  = document.getElementById("stUnpaid");
+let subs = JSON.parse(localStorage.getItem("subs")||"[]");
 
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
-let currentFilter="all";
-
-function save(){
- localStorage.setItem("subs",JSON.stringify(subs));
-}
-
-function setFilter(f){
- currentFilter=f;
- render();
-}
+function save(){ localStorage.setItem("subs",JSON.stringify(subs)); }
 
 function fmt(d){
- return d.getFullYear()+"/"+
- String(d.getMonth()+1).padStart(2,"0")+"/"+
- String(d.getDate()).padStart(2,"0");
+ return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
+}
+
+function sendWhatsApp(phone,msg){
+ window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
 function addSub(){
- if(
-  nameInput.value.trim()==="" ||
-  phoneInput.value.trim()==="" ||
-  productInput.value==="" ||
-  Number(priceInput.value)<=0 ||
-  Number(daysInput.value)<=0
- ){
-  alert("يرجى ملء الحقول الأساسية");
-  return;
- }
+ if(!name.value||!phone.value||!product.value||!price.value||!days.value) return alert("املأ الحقول");
 
  let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start);
- end.setDate(end.getDate()+Number(daysInput.value));
+ let end=new Date(start); end.setDate(end.getDate()+Number(days.value));
 
  subs.push({
   id:Date.now(),
-  name:nameInput.value,
-  phone:phoneInput.value,
-  email:emailInput.value,
-  profile:profileInput.value,
-  product:productInput.value,
-  price:priceInput.value,
+  name:name.value,
+  phone:phone.value,
+  email:email.value,
+  profile:profile.value,
+  product:product.value,
+  price:price.value,
   end:end.toISOString(),
-  paid:false,
-  n3:false,
-  n0:false
+  paid:false
  });
 
- save();
- nameInput.value=phoneInput.value=emailInput.value=priceInput.value=daysInput.value=profileInput.value="";
- productInput.value="";
- render();
-}
-
-function togglePaid(id){
- let s=subs.find(x=>x.id===id);
- s.paid=!s.paid;
- save(); render();
+ save(); location.reload();
 }
 
 function editSub(id){
  let s=subs.find(x=>x.id===id);
 
- let n=prompt("الاسم",s.name); if(!n)return;
- let p=prompt("الهاتف",s.phone); if(!p)return;
- let e=prompt("Email",s.email||""); if(e===null)return;
- let pr=prompt("Profil",s.profile||""); if(pr===null)return;
- let price=prompt("السعر",s.price); if(!price)return;
+ s.name=prompt("الاسم",s.name)||s.name;
+ s.phone=prompt("الهاتف",s.phone)||s.phone;
+ s.email=prompt("Email",s.email)||s.email;
+ s.profile=prompt("Profil",s.profile)||s.profile;
+ s.product=prompt("المنتج",s.product)||s.product;
+ s.price=prompt("السعر",s.price)||s.price;
 
- s.name=n;
- s.phone=p;
- s.email=e;
- s.profile=pr;
- s.price=price;
+ let d=prompt("تاريخ الانتهاء YYYY-MM-DD",fmt(new Date(s.end)));
+ if(d) s.end=new Date(d).toISOString();
 
  save(); render();
 }
 
-function remember renewSub(id){
+function renewSub(id){
  let s=subs.find(x=>x.id===id);
- let days=prompt("أدخل عدد أيام التجديد:");
- if(!days || isNaN(days) || days<=0)return;
+ let d=prompt("عدد أيام التجديد");
+ if(!d||isNaN(d))return;
 
- let today=new Date(); today.setHours(0,0,0,0);
- let end=new Date(s.end); end.setHours(0,0,0,0);
+ let end=new Date(s.end); let today=new Date();
  if(end<today) end=today;
-
- end.setDate(end.getDate()+Number(days));
-
+ end.setDate(end.getDate()+Number(d));
  s.end=end.toISOString();
- s.n3=false;
- s.n0=false;
 
  save(); render();
-}
 
-function deleteSub(id){
- if(!confirm("تأكيد الحذف؟"))return;
- subs=subs.filter(x=>x.id!==id);
- save(); render();
+ sendWhatsApp(s.phone,
+`مرحباً ${s.name}
+تم تجديد اشتراك ${s.product}
+📅 ${fmt(end)}
+⏳ ${d} يوم`);
 }
 
 function render(){
  list.innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
- let q=searchInput.value.toLowerCase();
 
- let total=0,active=0,expired=0,unpaid=0;
+ let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
-  total++;
-  diff<0?expired++:active++;
-  if(!s.paid) unpaid++;
-
-  if(currentFilter==="active" && diff<0)return;
-  if(currentFilter==="expired" && diff>=0)return;
-  if(currentFilter==="unpaid" && s.paid)return;
-
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
+  t++; diff<0?e++:a++; if(!s.paid)u++;
 
   let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
-
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
 <td>${s.email||"-"}</td>
 <td>${s.profile||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price} دج</td>
+<td>${s.price}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="s.paid=!s.paid;save();render()"></td>
 <td class="actions">
  <button onclick="renewSub(${s.id})">🔄</button>
  <button onclick="editSub(${s.id})">✏️</button>
- <button onclick="deleteSub(${s.id})">🗑</button>
+ <button onclick="subs=subs.filter(x=>x.id!==${s.id});save();render()">🗑</button>
 </td>`;
   list.appendChild(tr);
  });
 
- stTotal.textContent=total;
- stActive.textContent=active;
- stExpired.textContent=expired;
- stUnpaid.textContent=unpaid;
+ stTotal.textContent=t;
+ stActive.textContent=a;
+ stExpired.textContent=e;
+ stUnpaid.textContent=u;
 }
 
 render();
