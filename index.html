@@ -2,42 +2,29 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>📊 صفحة الأرباح</title>
+<title>📊 الأرباح</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-:root{
- --main:#1976d2;
- --bg:#f4f6f9;
- --card:#fff;
-}
-
 body{
  font-family:Arial;
- background:var(--bg);
+ background:#f4f6f9;
  margin:0;
  padding:15px;
 }
-
-h2,h3{
- text-align:center;
- color:var(--main);
-}
-
+h2,h3{text-align:center;color:#1976d2}
 .card{
- background:var(--card);
+ background:#fff;
  padding:15px;
  border-radius:8px;
  margin-bottom:15px;
 }
-
 .stats{
  display:flex;
  gap:10px;
  flex-wrap:wrap;
 }
-
 .stats div{
  flex:1;
  background:#eef3fa;
@@ -46,92 +33,67 @@ h2,h3{
  text-align:center;
  font-weight:bold;
 }
-
 table{
  width:100%;
  border-collapse:collapse;
- min-width:700px;
 }
-
 th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
  font-size:13px;
 }
-
-th{
- background:var(--main);
- color:#fff;
-}
-
-button{
- padding:5px 8px;
- cursor:pointer;
-}
+th{background:#1976d2;color:#fff}
+button{padding:5px 8px;cursor:pointer}
 </style>
 </head>
 
 <body>
 
-<h2>📊 لوحة الأرباح</h2>
+<h2>📊 صفحة الأرباح</h2>
 
 <!-- 💰 الإحصائيات -->
 <div class="card stats">
- <div>💰 إجمالي الأرباح<br><span id="total">0</span> دج</div>
+ <div>💰 الكل<br><span id="total">0</span> دج</div>
  <div>📅 اليوم<br><span id="today">0</span> دج</div>
  <div>📆 الشهر<br><span id="month">0</span> دج</div>
- <div>❌ غير محصل<br><span id="unpaid">0</span> دج</div>
+ <div>❌ غير مدفوع<br><span id="unpaid">0</span> دج</div>
 </div>
 
 <!-- 📊 الرسوم -->
-<div class="card">
- <h3>📊 الأرباح اليومية</h3>
- <canvas id="dailyChart"></canvas>
-</div>
-
-<div class="card">
- <h3>📊 الأرباح الشهرية</h3>
- <canvas id="monthlyChart"></canvas>
-</div>
-
-<div class="card">
- <h3>🧾 الأرباح حسب المنتج</h3>
- <canvas id="productChart"></canvas>
-</div>
+<div class="card"><h3>📊 يومي</h3><canvas id="daily"></canvas></div>
+<div class="card"><h3>📊 شهري</h3><canvas id="monthly"></canvas></div>
+<div class="card"><h3>🧾 حسب المنتج</h3><canvas id="product"></canvas></div>
 
 <!-- 🧾 جدول -->
-<div class="card table-wrapper">
- <h3>🧾 العمليات المدفوعة</h3>
- <table>
-  <thead>
-   <tr>
-    <th>الاسم</th>
-    <th>Profil</th>
-    <th>الهاتف</th>
-    <th>Email</th>
-    <th>المنتج</th>
-    <th>السعر</th>
-    <th>✏️</th>
-   </tr>
-  </thead>
-  <tbody id="rows"></tbody>
- </table>
+<div class="card">
+<h3>🧾 العمليات</h3>
+<table>
+<thead>
+<tr>
+ <th>الاسم</th>
+ <th>Profil</th>
+ <th>المنتج</th>
+ <th>السعر</th>
+ <th>مدفوع</th>
+ <th>✏️</th>
+</tr>
+</thead>
+<tbody id="rows"></tbody>
+</table>
 </div>
 
 <script>
-/* ===== تحميل البيانات ===== */
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let subs = JSON.parse(localStorage.getItem("subs")||"[]");
 
-/* ===== عناصر ===== */
-const totalEl  = document.getElementById("total");
-const todayEl  = document.getElementById("today");
-const monthEl  = document.getElementById("month");
-const unpaidEl = document.getElementById("unpaid");
-const rowsEl   = document.getElementById("rows");
+const totalEl=document.getElementById("total");
+const todayEl=document.getElementById("today");
+const monthEl=document.getElementById("month");
+const unpaidEl=document.getElementById("unpaid");
+const rows=document.getElementById("rows");
 
-/* ===== حساب الأرباح ===== */
-function calcCash(){
+/* ===== كاش ===== */
+function calc(){
  let total=0,today=0,month=0,unpaid=0;
  let now=new Date();
 
@@ -152,100 +114,65 @@ function calcCash(){
  unpaidEl.textContent=unpaid;
 }
 
-/* ===== بيانات الرسوم ===== */
-function dailyData(){
- let map={};
+/* ===== Charts data ===== */
+function mapData(fn){
+ let m={};
  subs.filter(s=>s.paid).forEach(s=>{
-  let k=new Date(s.id).toLocaleDateString();
-  map[k]=(map[k]||0)+Number(s.price);
+  let k=fn(s);
+  m[k]=(m[k]||0)+Number(s.price);
  });
- return map;
+ return m;
 }
 
-function monthlyData(){
- let map={};
- subs.filter(s=>s.paid).forEach(s=>{
-  let d=new Date(s.id);
-  let k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-  map[k]=(map[k]||0)+Number(s.price);
+function draw(){
+ let d=mapData(s=>new Date(s.id).toLocaleDateString());
+ new Chart(daily,{type:"line",data:{labels:Object.keys(d),datasets:[{data:Object.values(d)}]}});
+
+ let m=mapData(s=>{
+  let x=new Date(s.id);
+  return x.getFullYear()+"-"+(x.getMonth()+1);
  });
- return map;
+ new Chart(monthly,{type:"bar",data:{labels:Object.keys(m),datasets:[{data:Object.values(m)}]}});
+
+ let p=mapData(s=>s.product);
+ new Chart(product,{type:"pie",data:{labels:Object.keys(p),datasets:[{data:Object.values(p)}]}});
 }
 
-function productData(){
- let map={};
- subs.filter(s=>s.paid).forEach(s=>{
-  map[s.product]=(map[s.product]||0)+Number(s.price);
- });
- return map;
-}
-
-/* ===== رسم الرسوم ===== */
-function drawCharts(){
- let d=dailyData();
- new Chart(dailyChart,{
-  type:"line",
-  data:{labels:Object.keys(d),datasets:[{label:"دج",data:Object.values(d)}]}
- });
-
- let m=monthlyData();
- new Chart(monthlyChart,{
-  type:"bar",
-  data:{labels:Object.keys(m),datasets:[{label:"دج",data:Object.values(m)}]}
- });
-
- let p=productData();
- new Chart(productChart,{
-  type:"pie",
-  data:{labels:Object.keys(p),datasets:[{data:Object.values(p)}]}
- });
-}
-
-/* ===== جدول العمليات ===== */
-function renderTable(){
- rowsEl.innerHTML="";
- subs.filter(s=>s.paid).forEach(s=>{
-  rowsEl.innerHTML+=`
+/* ===== جدول ===== */
+function render(){
+ rows.innerHTML="";
+ subs.forEach(s=>{
+  rows.innerHTML+=`
 <tr>
  <td>${s.name}</td>
- <td>${s.profile || "-"}</td>
- <td>${s.phone}</td>
- <td>${s.email || "-"}</td>
+ <td>${s.profile||"-"}</td>
  <td>${s.product}</td>
- <td>${s.price} دج</td>
- <td><button onclick="editSub(${s.id})">✏️</button></td>
+ <td>${s.price}</td>
+ <td>${s.paid?"✔️":"❌"}</td>
+ <td><button onclick="edit(${s.id})">✏️</button></td>
 </tr>`;
  });
 }
 
-/* ===== تعديل كل البيانات ===== */
-function editSub(id){
+/* ===== تعديل كامل ===== */
+function edit(id){
  let s=subs.find(x=>x.id===id);
  if(!s)return;
 
  let name=prompt("الاسم",s.name); if(name===null)return;
- let profile=prompt("Profil (اختياري)",s.profile||"");
  let phone=prompt("الهاتف",s.phone); if(phone===null)return;
  let email=prompt("Email",s.email||"");
  let product=prompt("المنتج",s.product); if(product===null)return;
  let price=prompt("السعر",s.price); if(price===null)return;
+ let paid=confirm("مدفوع؟");
+ let profile=prompt("Profil (اختياري)",s.profile||"");
 
- s.name=name;
- s.profile=profile;
- s.phone=phone;
- s.email=email;
- s.product=product;
- s.price=price;
-
+ Object.assign(s,{name,phone,email,product,price,paid,profile});
  localStorage.setItem("subs",JSON.stringify(subs));
- renderTable();
- calcCash();
+ calc(); render();
 }
 
-/* ===== تشغيل ===== */
-calcCash();
-renderTable();
-drawCharts();
+calc(); render(); draw();
 </script>
 
 </body>
