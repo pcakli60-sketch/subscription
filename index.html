@@ -24,6 +24,7 @@ body{
 h2{
  text-align:center;
  color:var(--main);
+ margin-bottom:10px;
 }
 
 .card{
@@ -54,12 +55,15 @@ button{
  flex-wrap:wrap;
 }
 
+.filters button,.stats div{
+ flex:1;
+}
+
 .stats div{
  background:#eef3fa;
  padding:10px;
  border-radius:6px;
  text-align:center;
- flex:1;
 }
 
 .table-wrapper{overflow-x:auto}
@@ -67,7 +71,7 @@ button{
 table{
  width:100%;
  border-collapse:collapse;
- min-width:1200px;
+ min-width:1100px;
 }
 
 th,td{
@@ -88,6 +92,7 @@ th{background:var(--main);color:#fff}
  position:sticky;
  right:0;
  background:#fff;
+ z-index:2;
 }
 
 .actions button{
@@ -95,6 +100,7 @@ th{background:var(--main);color:#fff}
  margin:2px;
 }
 
+/* الأيام */
 .days-box{
  padding:4px 8px;
  border-radius:12px;
@@ -110,7 +116,14 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
-<input id="search" placeholder="بحث..." onkeyup="render()">
+<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
+
+<div class="filters">
+ <button onclick="setFilter('all')">الكل</button>
+ <button onclick="setFilter('active')">نشط</button>
+ <button onclick="setFilter('expired')">منتهي</button>
+ <button onclick="setFilter('unpaid')">غير مدفوع</button>
+</div>
 
 <div class="card stats">
  <div>📦 الكل<br><b id="stTotal">0</b></div>
@@ -124,10 +137,15 @@ th{background:var(--main);color:#fff}
  <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
  <input id="profile" placeholder="Profil (اختياري)">
- <input id="product" placeholder="المنتج">
- <input id="price" type="number" placeholder="السعر">
- <input id="days" type="number" placeholder="أيام الاشتراك">
- <button onclick="addSub()">➕ إضافة</button>
+ <select id="product">
+  <option value="">المنتج</option>
+  <option>Netflix</option>
+  <option>Shahid</option>
+  <option>IPTV</option>
+ </select>
+ <input id="price" type="number" placeholder="السعر (دج)">
+ <input id="days" type="number" placeholder="عدد أيام الاشتراك">
+ <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
 <div class="card table-wrapper">
@@ -153,9 +171,19 @@ th{background:var(--main);color:#fff}
 <script>
 const $ = id => document.getElementById(id);
 
-let subs = JSON.parse(localStorage.getItem("subs")||"[]");
+const nameInput=$("name"), phoneInput=$("phone"), emailInput=$("email"),
+profileInput=$("profile"), productInput=$("product"),
+priceInput=$("price"), daysInput=$("days"), searchInput=$("search"),
+list=$("list");
 
-function save(){ localStorage.setItem("subs",JSON.stringify(subs)); }
+const stTotal=$("stTotal"), stActive=$("stActive"),
+stExpired=$("stExpired"), stUnpaid=$("stUnpaid");
+
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let currentFilter="all";
+
+function save(){localStorage.setItem("subs",JSON.stringify(subs));}
+function setFilter(f){currentFilter=f;render();}
 
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
@@ -165,101 +193,59 @@ function sendWhatsApp(phone,msg){
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
+/* إضافة */
 function addSub(){
- if(!name.value||!phone.value||!product.value||!price.value||!days.value) return alert("املأ الحقول");
-
+ if(!nameInput.value||!phoneInput.value||!productInput.value||priceInput.value<=0||daysInput.value<=0){
+  alert("يرجى ملء الحقول الأساسية"); return;
+ }
  let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start); end.setDate(end.getDate()+Number(days.value));
+ let end=new Date(start); end.setDate(end.getDate()+Number(daysInput.value));
 
  subs.push({
   id:Date.now(),
-  name:name.value,
-  phone:phone.value,
-  email:email.value,
-  profile:profile.value,
-  product:product.value,
-  price:price.value,
+  name:nameInput.value,
+  phone:phoneInput.value,
+  email:emailInput.value,
+  profile:profileInput.value,
+  product:productInput.value,
+  price:priceInput.value,
   end:end.toISOString(),
   paid:false
  });
 
- save(); location.reload();
+ save();
+ nameInput.value=phoneInput.value=emailInput.value=profileInput.value=priceInput.value=daysInput.value="";
+ productInput.value="";
+ render();
 }
 
+/* ✏️ تعديل */
 function editSub(id){
  let s=subs.find(x=>x.id===id);
 
- s.name=prompt("الاسم",s.name)||s.name;
- s.phone=prompt("الهاتف",s.phone)||s.phone;
- s.email=prompt("Email",s.email)||s.email;
- s.profile=prompt("Profil",s.profile)||s.profile;
- s.product=prompt("المنتج",s.product)||s.product;
- s.price=prompt("السعر",s.price)||s.price;
-
- let d=prompt("تاريخ الانتهاء YYYY-MM-DD",fmt(new Date(s.end)));
- if(d) s.end=new Date(d).toISOString();
+ s.name   = prompt("الاسم",s.name)   || s.name;
+ s.phone  = prompt("الهاتف",s.phone) || s.phone;
+ s.email  = prompt("Email",s.email||"") ?? s.email;
+ s.profile= prompt("Profil",s.profile||"") ?? s.profile;
+ s.product= prompt("المنتج",s.product) || s.product;
+ s.price  = prompt("السعر",s.price) || s.price;
 
  save(); render();
 }
 
+/* 🔄 تجديد */
 function renewSub(id){
  let s=subs.find(x=>x.id===id);
- let d=prompt("عدد أيام التجديد");
- if(!d||isNaN(d))return;
+ let days=prompt("عدد أيام التجديد:");
+ if(!days || isNaN(days) || days<=0) return;
 
- let end=new Date(s.end); let today=new Date();
+ let today=new Date(); today.setHours(0,0,0,0);
+ let end=new Date(s.end); end.setHours(0,0,0,0);
  if(end<today) end=today;
- end.setDate(end.getDate()+Number(d));
+
+ end.setDate(end.getDate()+Number(days));
  s.end=end.toISOString();
 
  save(); render();
 
- sendWhatsApp(s.phone,
-`مرحباً ${s.name}
-تم تجديد اشتراك ${s.product}
-📅 ${fmt(end)}
-⏳ ${d} يوم`);
-}
-
-function render(){
- list.innerHTML="";
- let today=new Date(); today.setHours(0,0,0,0);
-
- let t=0,a=0,e=0,u=0;
-
- subs.forEach(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-
-  t++; diff<0?e++:a++; if(!s.paid)u++;
-
-  let tr=document.createElement("tr");
-  tr.innerHTML=`
-<td>${s.name}</td>
-<td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td>
-<td>${s.product}</td>
-<td>${s.price}</td>
-<td>${fmt(end)}</td>
-<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="s.paid=!s.paid;save();render()"></td>
-<td class="actions">
- <button onclick="renewSub(${s.id})">🔄</button>
- <button onclick="editSub(${s.id})">✏️</button>
- <button onclick="subs=subs.filter(x=>x.id!==${s.id});save();render()">🗑</button>
-</td>`;
-  list.appendChild(tr);
- });
-
- stTotal.textContent=t;
- stActive.textContent=a;
- stExpired.textContent=e;
- stUnpaid.textContent=u;
-}
-
-render();
-</script>
-
-</body>
-</html>
+ sendWhats
