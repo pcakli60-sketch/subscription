@@ -126,4 +126,29 @@ function sendWhatsApp(phone,name,product,end,days){
 }
 
 /* 🔔 تنبيهات اليوم (3 أيام) */
-function sendToday
+function sendTodayAlerts(){
+ let today = new Date();
+ today.setHours(0,0,0,0);
+ let found = false;
+
+ subs.forEach(s=>{
+  let end = new Date(s.end);
+  end.setHours(0,0,0,0);
+  let diff = Math.floor((end - today) / 86400000);
+
+  if(diff === 3){ // عدد الأيام قبل الانتهاء
+   sendWhatsApp(
+    s.phone,
+    s.name,
+    s.product,
+    fmt(end),
+    diff
+   );
+   found = true;
+  }
+ });
+
+ if(!found){
+  alert("ما كاش اشتراكات قريبة تنتهي خلال 3 أيام");
+ }
+}
