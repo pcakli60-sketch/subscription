@@ -10,7 +10,6 @@
 body{
  font-family:Arial;
  background:#f4f6f9;
- margin:0;
  padding:15px;
 }
 h2,h3{text-align:center;color:#1976d2}
@@ -44,15 +43,14 @@ th,td{
  font-size:13px;
 }
 th{background:#1976d2;color:#fff}
-button{padding:5px 8px;cursor:pointer}
 </style>
 </head>
 
 <body>
 
-<h2>📊 صفحة الأرباح</h2>
+<h2>📊 صفحة الأرباح (قراءة فقط)</h2>
 
-<!-- 💰 الإحصائيات -->
+<!-- 💰 إحصائيات -->
 <div class="card stats">
  <div>💰 الكل<br><span id="total">0</span> دج</div>
  <div>📅 اليوم<br><span id="today">0</span> دج</div>
@@ -60,23 +58,19 @@ button{padding:5px 8px;cursor:pointer}
  <div>❌ غير مدفوع<br><span id="unpaid">0</span> دج</div>
 </div>
 
-<!-- 📊 الرسوم -->
 <div class="card"><h3>📊 يومي</h3><canvas id="daily"></canvas></div>
 <div class="card"><h3>📊 شهري</h3><canvas id="monthly"></canvas></div>
 <div class="card"><h3>🧾 حسب المنتج</h3><canvas id="product"></canvas></div>
 
-<!-- 🧾 جدول -->
 <div class="card">
-<h3>🧾 العمليات</h3>
+<h3>🧾 العمليات المدفوعة</h3>
 <table>
 <thead>
 <tr>
  <th>الاسم</th>
- <th>Profil</th>
  <th>المنتج</th>
  <th>السعر</th>
- <th>مدفوع</th>
- <th>✏️</th>
+ <th>التاريخ</th>
 </tr>
 </thead>
 <tbody id="rows"></tbody>
@@ -84,7 +78,7 @@ button{padding:5px 8px;cursor:pointer}
 </div>
 
 <script>
-let subs = JSON.parse(localStorage.getItem("subs")||"[]");
+const subs = JSON.parse(localStorage.getItem("subs")||"[]");
 
 const totalEl=document.getElementById("total");
 const todayEl=document.getElementById("today");
@@ -92,7 +86,6 @@ const monthEl=document.getElementById("month");
 const unpaidEl=document.getElementById("unpaid");
 const rows=document.getElementById("rows");
 
-/* ===== كاش ===== */
 function calc(){
  let total=0,today=0,month=0,unpaid=0;
  let now=new Date();
@@ -114,11 +107,10 @@ function calc(){
  unpaidEl.textContent=unpaid;
 }
 
-/* ===== Charts data ===== */
-function mapData(fn){
+function mapData(keyFn){
  let m={};
  subs.filter(s=>s.paid).forEach(s=>{
-  let k=fn(s);
+  let k=keyFn(s);
   m[k]=(m[k]||0)+Number(s.price);
  });
  return m;
@@ -138,41 +130,22 @@ function draw(){
  new Chart(product,{type:"pie",data:{labels:Object.keys(p),datasets:[{data:Object.values(p)}]}});
 }
 
-/* ===== جدول ===== */
-function render(){
+function table(){
  rows.innerHTML="";
- subs.forEach(s=>{
+ subs.filter(s=>s.paid).forEach(s=>{
   rows.innerHTML+=`
 <tr>
  <td>${s.name}</td>
- <td>${s.profile||"-"}</td>
  <td>${s.product}</td>
  <td>${s.price}</td>
- <td>${s.paid?"✔️":"❌"}</td>
- <td><button onclick="edit(${s.id})">✏️</button></td>
+ <td>${new Date(s.id).toLocaleDateString()}</td>
 </tr>`;
  });
 }
 
-/* ===== تعديل كامل ===== */
-function edit(id){
- let s=subs.find(x=>x.id===id);
- if(!s)return;
-
- let name=prompt("الاسم",s.name); if(name===null)return;
- let phone=prompt("الهاتف",s.phone); if(phone===null)return;
- let email=prompt("Email",s.email||"");
- let product=prompt("المنتج",s.product); if(product===null)return;
- let price=prompt("السعر",s.price); if(price===null)return;
- let paid=confirm("مدفوع؟");
- let profile=prompt("Profil (اختياري)",s.profile||"");
-
- Object.assign(s,{name,phone,email,product,price,paid,profile});
- localStorage.setItem("subs",JSON.stringify(subs));
- calc(); render();
-}
-
-calc(); render(); draw();
+calc();
+table();
+draw();
 </script>
 
 </body>
