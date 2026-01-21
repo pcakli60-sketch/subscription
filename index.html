@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>إدارة الاشتراكات</title>
+<title>نظام إدارة الاشتراكات</title>
 
 <style>
 :root{
@@ -19,7 +19,11 @@ body{
  margin:0;
  padding:15px;
 }
-h2{text-align:center;color:var(--main)}
+h2{
+ text-align:center;
+ color:var(--main);
+ margin-bottom:10px;
+}
 .card{
  background:var(--card);
  padding:15px;
@@ -30,6 +34,7 @@ input,select,button{
  width:100%;
  padding:10px;
  margin:5px 0;
+ font-size:14px;
 }
 button{
  background:var(--main);
@@ -38,6 +43,19 @@ button{
  border-radius:5px;
  cursor:pointer;
 }
+.filters,.stats{
+ display:flex;
+ gap:5px;
+ flex-wrap:wrap;
+}
+.filters button,.stats div{flex:1}
+.stats div{
+ background:#eef3fa;
+ padding:10px;
+ border-radius:6px;
+ text-align:center;
+}
+.table-wrapper{overflow-x:auto}
 table{
  width:100%;
  border-collapse:collapse;
@@ -47,12 +65,23 @@ th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
+ white-space:nowrap;
  font-size:13px;
 }
 th{background:var(--main);color:#fff}
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
 .unpaid{background:var(--unpaid)}
+.actions{
+ position:sticky;
+ right:0;
+ background:#fff;
+ z-index:2;
+}
+.actions button{
+ padding:5px 8px;
+ margin:2px;
+}
 .days-box{
  padding:4px 8px;
  border-radius:12px;
@@ -68,6 +97,22 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
+<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
+
+<div class="filters">
+ <button onclick="setFilter('all')">الكل</button>
+ <button onclick="setFilter('active')">نشط</button>
+ <button onclick="setFilter('expired')">منتهي</button>
+ <button onclick="setFilter('unpaid')">غير مدفوع</button>
+</div>
+
+<div class="card stats">
+ <div>📦 الكل<br><b id="stTotal">0</b></div>
+ <div>🟢 نشط<br><b id="stActive">0</b></div>
+ <div>🔴 منتهي<br><b id="stExpired">0</b></div>
+ <div>❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
+</div>
+
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
  <input id="phone" placeholder="الهاتف">
@@ -79,12 +124,12 @@ th{background:var(--main);color:#fff}
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
- <input id="price" type="number" placeholder="السعر">
- <input id="days" type="number" placeholder="عدد الأيام">
- <button onclick="addSub()">➕ إضافة</button>
+ <input id="price" type="number" placeholder="السعر (دج)">
+ <input id="days" type="number" placeholder="عدد أيام الاشتراك">
+ <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
-<div class="card">
+<div class="card table-wrapper">
 <table>
 <thead>
 <tr>
@@ -105,19 +150,31 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-const nameInput=document.getElementById("name");
-const phoneInput=document.getElementById("phone");
-const emailInput=document.getElementById("email");
-const profilInput=document.getElementById("profil");
-const productInput=document.getElementById("product");
-const priceInput=document.getElementById("price");
-const daysInput=document.getElementById("days");
-const list=document.getElementById("list");
+const nameInput   = document.getElementById("name");
+const phoneInput  = document.getElementById("phone");
+const emailInput  = document.getElementById("email");
+const profilInput = document.getElementById("profil");
+const productInput= document.getElementById("product");
+const priceInput  = document.getElementById("price");
+const daysInput   = document.getElementById("days");
+const searchInput = document.getElementById("search");
+const list        = document.getElementById("list");
 
-let subs=JSON.parse(localStorage.getItem("subs")||"[]");
+const stTotal   = document.getElementById("stTotal");
+const stActive  = document.getElementById("stActive");
+const stExpired = document.getElementById("stExpired");
+const stUnpaid  = document.getElementById("stUnpaid");
+
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let currentFilter="all";
 
 function save(){
  localStorage.setItem("subs",JSON.stringify(subs));
+}
+
+function setFilter(f){
+ currentFilter=f;
+ render();
 }
 
 function fmt(d){
@@ -128,13 +185,13 @@ function fmt(d){
 
 function addSub(){
  if(
-  !nameInput.value ||
-  !phoneInput.value ||
-  !productInput.value ||
-  priceInput.value<=0 ||
-  daysInput.value<=0
+  nameInput.value.trim()==="" ||
+  phoneInput.value.trim()==="" ||
+  productInput.value==="" ||
+  Number(priceInput.value)<=0 ||
+  Number(daysInput.value)<=0
  ){
-  alert("عمّر الحقول اللازمة");
+  alert("يرجى ملء جميع الحقول");
   return;
  }
 
@@ -149,9 +206,11 @@ function addSub(){
   email:emailInput.value,
   profil:profilInput.value,
   product:productInput.value,
-  price:Number(priceInput.value),
+  price:priceInput.value,
   end:end.toISOString(),
-  paid:false
+  paid:false,
+  n3:false,
+  n0:false
  });
 
  save();
@@ -181,13 +240,13 @@ function editSub(id){
  s.email=e;
  s.profil=pr;
  s.product=prod;
- s.price=Number(price);
+ s.price=price;
 
  save(); render();
 }
 
 function deleteSub(id){
- if(!confirm("حذف؟"))return;
+ if(!confirm("تأكيد الحذف؟"))return;
  subs=subs.filter(x=>x.id!==id);
  save(); render();
 }
@@ -195,10 +254,23 @@ function deleteSub(id){
 function render(){
  list.innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
+ let q=searchInput.value.toLowerCase();
+
+ let total=0,active=0,expired=0,unpaid=0;
 
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
+
+  total++;
+  diff<0?expired++:active++;
+  if(!s.paid) unpaid++;
+
+  if(currentFilter==="active" && diff<0)return;
+  if(currentFilter==="expired" && diff>=0)return;
+  if(currentFilter==="unpaid" && s.paid)return;
+
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
   if(diff<0)tr.classList.add("danger");
@@ -211,7 +283,7 @@ function render(){
 <td>${s.email||"-"}</td>
 <td>${s.profil||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price}</td>
+<td>${s.price} دج</td>
 <td>${fmt(end)}</td>
 <td>
  <span class="days-box ${
@@ -219,12 +291,17 @@ function render(){
  }">${diff}</span>
 </td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
-<td>
+<td class="actions">
  <button onclick="editSub(${s.id})">✏️</button>
  <button onclick="deleteSub(${s.id})">🗑</button>
 </td>`;
   list.appendChild(tr);
  });
+
+ stTotal.textContent=total;
+ stActive.textContent=active;
+ stExpired.textContent=expired;
+ stUnpaid.textContent=unpaid;
 }
 
 render();
