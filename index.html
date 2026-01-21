@@ -2,16 +2,15 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام إدارة الاشتراكات</title>
+<title>📊 صفحة الأرباح</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 :root{
  --main:#1976d2;
  --bg:#f4f6f9;
  --card:#fff;
- --warn:#fff3cd;
- --danger:#f8d7da;
- --unpaid:#fdecea;
 }
 
 body{
@@ -21,10 +20,9 @@ body{
  padding:15px;
 }
 
-h2{
+h2,h3{
  text-align:center;
  color:var(--main);
- margin-bottom:10px;
 }
 
 .card{
@@ -34,301 +32,220 @@ h2{
  margin-bottom:15px;
 }
 
-input,select,button{
- width:100%;
- padding:10px;
- margin:5px 0;
- font-size:14px;
-}
-
-button{
- background:var(--main);
- color:#fff;
- border:none;
- border-radius:5px;
- cursor:pointer;
-}
-
-.filters,.stats{
+.stats{
  display:flex;
- gap:5px;
+ gap:10px;
  flex-wrap:wrap;
 }
 
-.filters button,.stats div{
- flex:1;
-}
-
 .stats div{
+ flex:1;
  background:#eef3fa;
  padding:10px;
  border-radius:6px;
  text-align:center;
+ font-weight:bold;
 }
-
-.table-wrapper{overflow-x:auto}
 
 table{
  width:100%;
  border-collapse:collapse;
- min-width:1000px;
+ min-width:700px;
 }
 
 th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
- white-space:nowrap;
  font-size:13px;
 }
 
-th{background:var(--main);color:#fff}
-
-.warn{background:var(--warn)}
-.danger{background:var(--danger)}
-.unpaid{background:var(--unpaid)}
-
-.actions{
- position:sticky;
- right:0;
- background:#fff;
- z-index:2;
+th{
+ background:var(--main);
+ color:#fff;
 }
 
-.actions button{
+button{
  padding:5px 8px;
- margin:2px;
+ cursor:pointer;
 }
-
-/* ⏳ الأيام */
-.days-box{
- padding:4px 8px;
- border-radius:12px;
- font-weight:bold;
-}
-.days-ok{background:#e8f5e9;color:#2e7d32}
-.days-warn{background:#fff3e0;color:#ef6c00}
-.days-expired{background:#fdecea;color:#c62828}
 </style>
 </head>
 
 <body>
 
-<h2>إدارة الاشتراكات</h2>
+<h2>📊 لوحة الأرباح</h2>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
-
-<div class="filters">
- <button onclick="setFilter('all')">الكل</button>
- <button onclick="setFilter('active')">نشط</button>
- <button onclick="setFilter('expired')">منتهي</button>
- <button onclick="setFilter('unpaid')">غير مدفوع</button>
+<!-- 💰 الإحصائيات -->
+<div class="card stats">
+ <div>💰 إجمالي الأرباح<br><span id="total">0</span> دج</div>
+ <div>📅 اليوم<br><span id="today">0</span> دج</div>
+ <div>📆 الشهر<br><span id="month">0</span> دج</div>
+ <div>❌ غير محصل<br><span id="unpaid">0</span> دج</div>
 </div>
 
-<div class="card stats">
- <div>📦 الكل<br><b id="stTotal">0</b></div>
- <div>🟢 نشط<br><b id="stActive">0</b></div>
- <div>🔴 منتهي<br><b id="stExpired">0</b></div>
- <div>❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
+<!-- 📊 الرسوم -->
+<div class="card">
+ <h3>📊 الأرباح اليومية</h3>
+ <canvas id="dailyChart"></canvas>
 </div>
 
 <div class="card">
- <input id="name" placeholder="اسم الزبون">
- <input id="phone" placeholder="الهاتف">
- <input id="email" placeholder="Email">
- <select id="product">
-  <option value="">المنتج</option>
-  <option>Netflix</option>
-  <option>Shahid</option>
-  <option>IPTV</option>
- </select>
- <input id="price" type="number" placeholder="السعر (دج)">
- <input id="days" type="number" placeholder="عدد أيام الاشتراك">
- <button onclick="addSub()">➕ إضافة اشتراك</button>
+ <h3>📊 الأرباح الشهرية</h3>
+ <canvas id="monthlyChart"></canvas>
 </div>
 
+<div class="card">
+ <h3>🧾 الأرباح حسب المنتج</h3>
+ <canvas id="productChart"></canvas>
+</div>
+
+<!-- 🧾 جدول -->
 <div class="card table-wrapper">
-<table>
-<thead>
-<tr>
- <th>الاسم</th>
- <th>الهاتف</th>
- <th>Email</th>
- <th>المنتج</th>
- <th>السعر</th>
- <th>الانتهاء</th>
- <th>⏳ الأيام</th>
- <th>مدفوع</th>
- <th>إجراءات</th>
-</tr>
-</thead>
-<tbody id="list"></tbody>
-</table>
+ <h3>🧾 العمليات المدفوعة</h3>
+ <table>
+  <thead>
+   <tr>
+    <th>الاسم</th>
+    <th>Profil</th>
+    <th>الهاتف</th>
+    <th>Email</th>
+    <th>المنتج</th>
+    <th>السعر</th>
+    <th>✏️</th>
+   </tr>
+  </thead>
+  <tbody id="rows"></tbody>
+ </table>
 </div>
 
 <script>
-/* ✅ تعريف العناصر (تصحيح الخطأ الأساسي) */
-const nameInput   = document.getElementById("name");
-const phoneInput  = document.getElementById("phone");
-const emailInput  = document.getElementById("email");
-const productInput= document.getElementById("product");
-const priceInput  = document.getElementById("price");
-const daysInput   = document.getElementById("days");
-const searchInput = document.getElementById("search");
-const list        = document.getElementById("list");
-
-const stTotal   = document.getElementById("stTotal");
-const stActive  = document.getElementById("stActive");
-const stExpired = document.getElementById("stExpired");
-const stUnpaid  = document.getElementById("stUnpaid");
-
-/* ===== البيانات ===== */
+/* ===== تحميل البيانات ===== */
 let subs = JSON.parse(localStorage.getItem("subs") || "[]");
-let currentFilter="all";
 
-function save(){
- localStorage.setItem("subs",JSON.stringify(subs));
-}
+/* ===== عناصر ===== */
+const totalEl  = document.getElementById("total");
+const todayEl  = document.getElementById("today");
+const monthEl  = document.getElementById("month");
+const unpaidEl = document.getElementById("unpaid");
+const rowsEl   = document.getElementById("rows");
 
-function setFilter(f){
- currentFilter=f;
- render();
-}
-
-function fmt(d){
- return d.getFullYear()+"/"+
- String(d.getMonth()+1).padStart(2,"0")+"/"+
- String(d.getDate()).padStart(2,"0");
-}
-
-function sendWhatsApp(phone,name,product,end,days){
- let msg=
-`مرحباً ${name} 👋
-
-نود إعلامكم أن اشتراككم في خدمة ${product}
-${days<=0?"قد انتهى ❌":"سينتهي بتاريخ "+end+" ⏰"}
-⏳ عدد الأيام المتبقية: ${days}
-
-يرجى الرد للتجديد.
-شكراً لثقتكم بنا 🌟`;
-
- window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
-}
-
-/* ➕ إضافة اشتراك (مصَحَّحة) */
-function addSub(){
- if(
-  nameInput.value.trim()==="" ||
-  phoneInput.value.trim()==="" ||
-  productInput.value==="" ||
-  Number(priceInput.value)<=0 ||
-  Number(daysInput.value)<=0
- ){
-  alert("يرجى ملء جميع الحقول");
-  return;
- }
-
- let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start);
- end.setDate(end.getDate()+Number(daysInput.value));
-
- subs.push({
-  id:Date.now(),
-  name:nameInput.value,
-  phone:phoneInput.value,
-  email:emailInput.value,
-  product:productInput.value,
-  price:priceInput.value,
-  end:end.toISOString(),
-  paid:false,
-  n3:false,
-  n0:false
- });
-
- save();
- nameInput.value=phoneInput.value=emailInput.value=priceInput.value=daysInput.value="";
- productInput.value="";
- render();
-}
-
-function togglePaid(id){
- let s=subs.find(x=>x.id===id);
- s.paid=!s.paid;
- save(); render();
-}
-
-function editSub(id){
- let s=subs.find(x=>x.id===id);
- let n=prompt("الاسم",s.name); if(!n)return;
- let p=prompt("الهاتف",s.phone); if(!p)return;
- let e=prompt("Email",s.email||""); if(e===null)return;
- s.name=n; s.phone=p; s.email=e;
- save(); render();
-}
-
-function deleteSub(id){
- if(!confirm("تأكيد الحذف؟"))return;
- subs=subs.filter(x=>x.id!==id);
- save(); render();
-}
-
-function render(){
- list.innerHTML="";
- let today=new Date(); today.setHours(0,0,0,0);
- let q=searchInput.value.toLowerCase();
-
- let total=0,active=0,expired=0,unpaid=0;
+/* ===== حساب الأرباح ===== */
+function calcCash(){
+ let total=0,today=0,month=0,unpaid=0;
+ let now=new Date();
 
  subs.forEach(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
+  let price=Number(s.price)||0;
+  let d=new Date(s.id);
 
-  total++;
-  diff<0?expired++:active++;
-  if(!s.paid) unpaid++;
-
-  if(currentFilter==="active" && diff<0)return;
-  if(currentFilter==="expired" && diff>=0)return;
-  if(currentFilter==="unpaid" && s.paid)return;
-
-  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
-
-  if(diff===3 && !s.n3){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n3=true;save();}
-  if(diff===0 && !s.n0){sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);s.n0=true;save();}
-
-  let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
-
-  tr.innerHTML=`
-<td>${s.name}</td>
-<td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.product}</td>
-<td>${s.price} دج</td>
-<td>${fmt(end)}</td>
-<td>
- <span class="days-box ${
-  diff<0?'days-expired':diff<=3?'days-warn':'days-ok'
- }">${diff}</span>
-</td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
-<td class="actions">
- <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
- <button onclick="editSub(${s.id})">✏️</button>
- <button onclick="deleteSub(${s.id})">🗑</button>
-</td>`;
-  list.appendChild(tr);
+  if(s.paid){
+   total+=price;
+   if(d.toDateString()===now.toDateString()) today+=price;
+   if(d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear()) month+=price;
+  }else unpaid+=price;
  });
 
- stTotal.textContent=total;
- stActive.textContent=active;
- stExpired.textContent=expired;
- stUnpaid.textContent=unpaid;
+ totalEl.textContent=total;
+ todayEl.textContent=today;
+ monthEl.textContent=month;
+ unpaidEl.textContent=unpaid;
 }
 
-render();
+/* ===== بيانات الرسوم ===== */
+function dailyData(){
+ let map={};
+ subs.filter(s=>s.paid).forEach(s=>{
+  let k=new Date(s.id).toLocaleDateString();
+  map[k]=(map[k]||0)+Number(s.price);
+ });
+ return map;
+}
+
+function monthlyData(){
+ let map={};
+ subs.filter(s=>s.paid).forEach(s=>{
+  let d=new Date(s.id);
+  let k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+  map[k]=(map[k]||0)+Number(s.price);
+ });
+ return map;
+}
+
+function productData(){
+ let map={};
+ subs.filter(s=>s.paid).forEach(s=>{
+  map[s.product]=(map[s.product]||0)+Number(s.price);
+ });
+ return map;
+}
+
+/* ===== رسم الرسوم ===== */
+function drawCharts(){
+ let d=dailyData();
+ new Chart(dailyChart,{
+  type:"line",
+  data:{labels:Object.keys(d),datasets:[{label:"دج",data:Object.values(d)}]}
+ });
+
+ let m=monthlyData();
+ new Chart(monthlyChart,{
+  type:"bar",
+  data:{labels:Object.keys(m),datasets:[{label:"دج",data:Object.values(m)}]}
+ });
+
+ let p=productData();
+ new Chart(productChart,{
+  type:"pie",
+  data:{labels:Object.keys(p),datasets:[{data:Object.values(p)}]}
+ });
+}
+
+/* ===== جدول العمليات ===== */
+function renderTable(){
+ rowsEl.innerHTML="";
+ subs.filter(s=>s.paid).forEach(s=>{
+  rowsEl.innerHTML+=`
+<tr>
+ <td>${s.name}</td>
+ <td>${s.profile || "-"}</td>
+ <td>${s.phone}</td>
+ <td>${s.email || "-"}</td>
+ <td>${s.product}</td>
+ <td>${s.price} دج</td>
+ <td><button onclick="editSub(${s.id})">✏️</button></td>
+</tr>`;
+ });
+}
+
+/* ===== تعديل كل البيانات ===== */
+function editSub(id){
+ let s=subs.find(x=>x.id===id);
+ if(!s)return;
+
+ let name=prompt("الاسم",s.name); if(name===null)return;
+ let profile=prompt("Profil (اختياري)",s.profile||"");
+ let phone=prompt("الهاتف",s.phone); if(phone===null)return;
+ let email=prompt("Email",s.email||"");
+ let product=prompt("المنتج",s.product); if(product===null)return;
+ let price=prompt("السعر",s.price); if(price===null)return;
+
+ s.name=name;
+ s.profile=profile;
+ s.phone=phone;
+ s.email=email;
+ s.product=product;
+ s.price=price;
+
+ localStorage.setItem("subs",JSON.stringify(subs));
+ renderTable();
+ calcCash();
+}
+
+/* ===== تشغيل ===== */
+calcCash();
+renderTable();
+drawCharts();
 </script>
 
 </body>
