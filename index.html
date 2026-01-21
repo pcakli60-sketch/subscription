@@ -11,40 +11,28 @@
  --warning:#ef6c00;
  --danger:#c62828;
  --bg:#f4f6f9;
- --card:#ffffff;
+ --card:#fff;
  --unpaid:#fdecea;
 }
 body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
 h2{text-align:center;color:var(--main)}
-.card{background:var(--card);padding:15px;border-radius:10px;margin-bottom:15px;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.card{background:var(--card);padding:15px;border-radius:10px;margin-bottom:15px}
 input,select,button{width:100%;padding:10px;margin:5px 0;font-size:14px}
-button{border:none;border-radius:6px;cursor:pointer;color:#fff}
-button.main{background:var(--main)}
-button.success{background:var(--success)}
-button.warning{background:var(--warning)}
-button.danger{background:var(--danger)}
-
-.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
-.filters button,.stats div{flex:1}
-.stats div{background:#eef3fa;padding:10px;border-radius:8px;text-align:center;font-weight:bold}
-
+button{border:none;border-radius:6px;color:#fff;cursor:pointer}
+.main{background:var(--main)}
+.success{background:var(--success)}
+.warning{background:var(--warning)}
+.danger{background:var(--danger)}
+.filters{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.filters button{flex:1}
 table{width:100%;border-collapse:collapse;min-width:1100px}
-th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
+th,td{border:1px solid #ccc;padding:6px;text-align:center;font-size:13px}
 th{background:var(--main);color:#fff}
-
-.warn{background:#fff3e0}
-.expired{background:#fdecea}
-.unpaid{background:var(--unpaid)}
-
-.actions button{padding:5px 8px;margin:2px;font-size:13px}
-
 .days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
 .days-ok{background:#e8f5e9;color:var(--success)}
 .days-warn{background:#fff3e0;color:var(--warning)}
 .days-expired{background:#fdecea;color:var(--danger)}
-
-.logout{background:var(--danger);width:auto;padding:6px 12px}
-.alert-btn{background:var(--warning);margin-bottom:10px}
+.actions button{padding:5px 8px;margin:2px}
 </style>
 </head>
 
@@ -61,10 +49,7 @@ th{background:var(--main);color:#fff}
 <!-- APP -->
 <div id="app" style="display:none">
 
-<div style="display:flex;justify-content:space-between;align-items:center">
- <h2>إدارة الاشتراكات</h2>
- <button class="logout" onclick="logout()">Logout</button>
-</div>
+<h2>إدارة الاشتراكات</h2>
 
 <input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
 
@@ -72,31 +57,22 @@ th{background:var(--main);color:#fff}
  <button class="main" onclick="setFilter('all')">الكل</button>
  <button class="success" onclick="setFilter('active')">نشط</button>
  <button class="danger" onclick="setFilter('expired')">منتهي</button>
- <button class="warning" onclick="setFilter('unpaid')">غير مدفوع</button>
 </div>
 
-<div class="card stats">
- <div>📦 الكل<br><span id="stTotal">0</span></div>
- <div style="color:var(--success)">🟢 نشط<br><span id="stActive">0</span></div>
- <div style="color:var(--danger)">🔴 منتهي<br><span id="stExpired">0</span></div>
- <div style="color:var(--warning)">❌ غير مدفوع<br><span id="stUnpaid">0</span></div>
-</div>
-
-<button class="alert-btn" onclick="sendTodayAlerts()">📩 تنبيهات 3 أيام</button>
+<button class="warning" onclick="sendTodayAlerts()">🔔 إرسال التنبيهات</button>
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
  <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
- <input id="profile" placeholder="Profil">
  <select id="product">
-  <option value="">المنتج</option>
+  <option value="">الخدمة</option>
   <option>Netflix</option>
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
  <input id="price" type="number" placeholder="السعر">
- <input id="days" type="number" placeholder="عدد أيام الاشتراك">
+ <input id="days" type="number" placeholder="عدد الأيام">
  <button class="main" onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
@@ -104,9 +80,13 @@ th{background:var(--main);color:#fff}
 <table>
 <thead>
 <tr>
- <th>الاسم</th><th>الهاتف</th><th>Email</th><th>Profil</th>
- <th>المنتج</th><th>السعر</th><th>الانتهاء</th>
- <th>⏳ الأيام</th><th>مدفوع</th><th>إجراءات</th>
+ <th>الاسم</th>
+ <th>الهاتف</th>
+ <th>Email</th>
+ <th>الخدمة</th>
+ <th>الانتهاء</th>
+ <th>⏳ الأيام</th>
+ <th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -120,7 +100,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebas
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc }
 from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import {
- getAuth, signInWithEmailAndPassword, signOut,
+ getAuth, signInWithEmailAndPassword,
  onAuthStateChanged, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
@@ -128,10 +108,7 @@ import {
 const firebaseConfig = {
  apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
  authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
- projectId: "systeme-des-abonnements-6a98c",
- storageBucket: "systeme-des-abonnements-6a98c.appspot.com",
- messagingSenderId: "74948745712",
- appId: "1:74948745712:web:ea9140bdf7dafb85baa535"
+ projectId: "systeme-des-abonnements-6a98c"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -146,96 +123,73 @@ let subs=[], currentFilter="all";
 async function login(){
  await signInWithEmailAndPassword(auth,$("loginEmail").value,$("loginPass").value);
 }
-async function logout(){ await signOut(auth); }
-
 onAuthStateChanged(auth,user=>{
- if(user){ $("loginBox").style.display="none"; $("app").style.display="block"; loadSubs();}
- else{ $("loginBox").style.display="block"; $("app").style.display="none";}
+ $("loginBox").style.display = user ? "none" : "block";
+ $("app").style.display = user ? "block" : "none";
+ if(user) loadSubs();
 });
 
-/* DATA */
+/* LOAD */
 async function loadSubs(){
  subs=[];
  const snap=await getDocs(collection(db,"subs"));
  snap.forEach(d=>subs.push({id:d.id,...d.data()}));
  render();
 }
-function setFilter(f){currentFilter=f;render();}
-function fmt(d){return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");}
 
-/* WhatsApp */
+/* HELPERS */
+function fmt(d){
+ return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
+}
 
- function sendWhatsApp(phone, name, product, end, days){
- if(!phone) return;
-
- // ✅ حماية: إذا الخدمة فارغة
+/* WHATSAPP */
+function sendWhatsApp(phone,name,product,end,days){
  product = product || "الخدمة";
-
- let msg = "";
-
- // 🔴 رسالة الاشتراك المنتهي
- if(days < 0){
-  msg =
+ let msg = days < 0 ?
 `مرحباً ${name} 👋
 
 ⚠️ اشتراكك في خدمة ${product} قد انتهى
 📅 بتاريخ: ${end}
 
-يرجى التواصل معنا لتجديد الاشتراك في أقرب وقت 🔄
-نحن في خدمتكم دائماً 🌟`;
- }
- // 🟢 رسالة الاشتراك النشط
- else{
-  msg =
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟`
+:
 `مرحباً ${name} 👋
 
 اشتراكك في خدمة ${product}
 سينتهي بتاريخ ${end} ⏰
 ⏳ الأيام المتبقية: ${days} أيام
 
-يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
 نحن في خدمتكم دائماً 🌟`;
- }
 
- window.open(
-  "https://wa.me/"+phone+"?text="+encodeURIComponent(msg),
-  "_blank"
- );
+ window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg));
 }
 
 /* CRUD */
 async function addSub(){
- let days=parseInt($("days").value,10);
- if(!$("name").value||!$("phone").value||!$("product").value||!days){
-  alert("يرجى ملء الحقول"); return;
- }
+ let days=+$("days").value;
+ if(!days||!$("name").value||!$("phone").value||!$("product").value)return;
  let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
  await addDoc(collection(db,"subs"),{
-  name:$("name").value, phone:$("phone").value,
-  email:$("email").value, profile:$("profile").value,
-  product:$("product").value, price:$("price").value,
-  end:end.toISOString(), paid:false
+  name:$("name").value,
+  phone:$("phone").value,
+  email:$("email").value,
+  product:$("product").value,
+  price:$("price").value,
+  end:end.toISOString(),
+  alert3Sent:false,
+  alertExpiredSent:false
  });
  loadSubs();
 }
 
 async function editSub(id){
- async function editSub(id){
- let s = subs.find(x => x.id === id);
- if(!s) return;
-
- let name    = prompt("الاسم", s.name);
- let phone   = prompt("الهاتف", s.phone);
- let product = prompt("الخدمة (Netflix / IPTV ...)", s.product);
- let price   = prompt("السعر", s.price);
-
- await updateDoc(doc(db,"subs",id),{
-  name:    name    || s.name,
-  phone:   phone   || s.phone,
-  product: product || s.product,
-  price:   price   || s.price
- });
-
+ let s=subs.find(x=>x.id===id);
+ let name=prompt("الاسم",s.name)||s.name;
+ let phone=prompt("الهاتف",s.phone)||s.phone;
+ let product=prompt("الخدمة",s.product)||s.product;
+ let price=prompt("السعر",s.price)||s.price;
+ await updateDoc(doc(db,"subs",id),{name,phone,product,price});
  loadSubs();
 }
 
@@ -243,57 +197,64 @@ async function renewSub(id){
  let s=subs.find(x=>x.id===id);
  let d=parseInt(prompt("عدد أيام التجديد"),10);
  if(!d) return;
- let end=new Date(s.end); end.setDate(end.getDate()+d);
- await updateDoc(doc(db,"subs",id),{end:end.toISOString()});
+ let end=new Date(s.end); end.setHours(0,0,0,0); end.setDate(end.getDate()+d);
+ await updateDoc(doc(db,"subs",id),{
+  end:end.toISOString(),
+  alert3Sent:false,
+  alertExpiredSent:false
+ });
  loadSubs();
 }
 
 async function deleteSub(id){
- if(confirm("حذف؟")){ await deleteDoc(doc(db,"subs",id)); loadSubs(); }
+ if(confirm("حذف الاشتراك؟")){
+  await deleteDoc(doc(db,"subs",id));
+  loadSubs();
+ }
 }
 
-async function togglePaid(id,val){
- await updateDoc(doc(db,"subs",id),{paid:val});
- loadSubs();
-}
-
-/* Alerts */
-function sendTodayAlerts(){
+/* ALERTS */
+async function sendTodayAlerts(){
  let today=new Date(); today.setHours(0,0,0,0);
- subs.forEach(s=>{
-  let end=new Date(s.end);
+ for(let s of subs){
+  let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
-  if(diff===3) sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
- });
+
+  if(diff===3 && !s.alert3Sent){
+   sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+   await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
+  }
+
+  if(diff<0 && !s.alertExpiredSent){
+   sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+   await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
+  }
+ }
 }
 
-/* Render */
+/* FILTER */
+function setFilter(f){currentFilter=f;render();}
+
+/* RENDER */
 function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
  let q=$("search").value.toLowerCase();
- let t=0,a=0,e=0,u=0;
-
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
-  t++; diff<0?e++:a++; if(!s.paid)u++;
   if(currentFilter==="active"&&diff<0)return;
   if(currentFilter==="expired"&&diff>=0)return;
-  if(currentFilter==="unpaid"&&s.paid)return;
-  if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
-  if(diff<0) tr.classList.add("expired");
-  else if(diff<=3) tr.classList.add("warn");
-  if(!s.paid) tr.classList.add("unpaid");
-
   tr.innerHTML=`
-<td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
+<td>${s.name}</td>
+<td>${s.phone}</td>
+<td>${s.email||"-"}</td>
+<td>${s.product}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
  <button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
  <button class="main" onclick="editSub('${s.id}')">✏️</button>
@@ -302,16 +263,11 @@ function render(){
 </td>`;
   $("list").appendChild(tr);
  });
-
- $("stTotal").textContent=t;
- $("stActive").textContent=a;
- $("stExpired").textContent=e;
- $("stUnpaid").textContent=u;
 }
 
 Object.assign(window,{
- login,logout,addSub,editSub,renewSub,
- deleteSub,togglePaid,setFilter,sendWhatsApp,sendTodayAlerts
+ login,addSub,editSub,renewSub,
+ deleteSub,sendWhatsApp,sendTodayAlerts,setFilter
 });
 </script>
 
