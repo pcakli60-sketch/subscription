@@ -2,83 +2,102 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>نظام إدارة الاشتراكات</title>
+<title>إدارة الاشتراكات</title>
 
 <style>
 :root{
- --bg:#f4f6f9;--card:#fff;--main:#1976d2;--text:#000;
- --warn:#fff3cd;--danger:#f8d7da;--unpaid:#f5c6cb;
+ --main:#1976d2;
+ --bg:#f4f6f9;
+ --card:#fff;
+ --warn:#fff3cd;
+ --danger:#f8d7da;
+ --unpaid:#fdecea;
 }
 body{
- font-family:Arial;background:var(--bg);color:var(--text);
- padding:20px;transition:.3s
+ font-family:Arial;
+ background:var(--bg);
+ margin:0;
+ padding:15px;
 }
-.dark{--bg:#121212;--card:#1e1e1e;--text:#eee}
 h2{text-align:center;color:var(--main)}
-.card{background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px}
-input,select,button,textarea{
- width:100%;padding:10px;margin:5px 0;border-radius:5px
+.card{
+ background:var(--card);
+ padding:15px;
+ border-radius:8px;
+ margin-bottom:15px;
 }
-button{background:var(--main);color:#fff;border:none;cursor:pointer}
-table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ccc;padding:8px;text-align:center}
+input,select,button{
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+}
+button{
+ background:var(--main);
+ color:#fff;
+ border:none;
+ border-radius:5px;
+ cursor:pointer;
+}
+table{
+ width:100%;
+ border-collapse:collapse;
+ min-width:1100px;
+}
+th,td{
+ border:1px solid #ccc;
+ padding:6px;
+ text-align:center;
+ font-size:13px;
+}
 th{background:var(--main);color:#fff}
 .warn{background:var(--warn)}
 .danger{background:var(--danger)}
-.unpaid{background:var(--unpaid)!important}
-.actions button{margin:2px;padding:5px}
-.top{display:flex;gap:10px;flex-wrap:wrap}
+.unpaid{background:var(--unpaid)}
+.days-box{
+ padding:4px 8px;
+ border-radius:12px;
+ font-weight:bold;
+}
+.days-ok{background:#e8f5e9;color:#2e7d32}
+.days-warn{background:#fff3e0;color:#ef6c00}
+.days-expired{background:#fdecea;color:#c62828}
 </style>
 </head>
 
 <body>
 
-<div class="top">
-  <button onclick="toggleMode()">🌙 الوضع الليلي</button>
-  <input id="search" placeholder="بحث بالاسم أو الهاتف" onkeyup="render()">
-</div>
-
-<h2>نظام إدارة الاشتراكات</h2>
-
-<!-- PROFIL -->
-<div class="card">
-<strong>👤 Profil</strong>
-<input id="pname" placeholder="اسمك">
-<input id="pphone" placeholder="هاتفك">
-<textarea id="pnote" placeholder="ملاحظة"></textarea>
-<button onclick="saveProfile()">💾 حفظ</button>
-</div>
+<h2>إدارة الاشتراكات</h2>
 
 <div class="card">
-  <input id="name" placeholder="اسم الزبون">
-  <input id="phone" placeholder="رقم الهاتف">
-  <input id="email" placeholder="E-mail">
-  <select id="product">
-    <option value="">اختر المنتج</option>
-    <option>Netflix</option>
-    <option>Shahid</option>
-    <option>IPTV</option>
-  </select>
-  <input id="price" type="number" placeholder="السعر (دج)">
-  <input id="days" type="number" placeholder="المدة بالأيام">
-  <select id="paid">
-    <option value="true">مدفوع ✅</option>
-    <option value="false">غير مدفوع ❌</option>
-  </select>
-  <button onclick="add()">➕ إضافة</button>
+ <input id="name" placeholder="اسم الزبون">
+ <input id="phone" placeholder="الهاتف">
+ <input id="email" placeholder="Email">
+ <input id="profil" placeholder="Profil (اختياري)">
+ <select id="product">
+  <option value="">المنتج</option>
+  <option>Netflix</option>
+  <option>Shahid</option>
+  <option>IPTV</option>
+ </select>
+ <input id="price" type="number" placeholder="السعر">
+ <input id="days" type="number" placeholder="عدد الأيام">
+ <button onclick="addSub()">➕ إضافة</button>
 </div>
 
 <div class="card">
 <table>
 <thead>
 <tr>
-<th>الاسم</th>
-<th>الهاتف</th>
-<th>المنتج</th>
-<th>السعر</th>
-<th>الانتهاء</th>
-<th>الدفع</th>
-<th>إجراءات</th>
+ <th>الاسم</th>
+ <th>الهاتف</th>
+ <th>Email</th>
+ <th>Profil</th>
+ <th>المنتج</th>
+ <th>السعر</th>
+ <th>الانتهاء</th>
+ <th>⏳ الأيام</th>
+ <th>مدفوع</th>
+ <th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -86,113 +105,128 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-let subs = JSON.parse(localStorage.getItem("subs")||"[]");
-let profile = JSON.parse(localStorage.getItem("profile")||"{}");
+const nameInput=document.getElementById("name");
+const phoneInput=document.getElementById("phone");
+const emailInput=document.getElementById("email");
+const profilInput=document.getElementById("profil");
+const productInput=document.getElementById("product");
+const priceInput=document.getElementById("price");
+const daysInput=document.getElementById("days");
+const list=document.getElementById("list");
 
-function save(){localStorage.setItem("subs",JSON.stringify(subs));}
-function fmt(d){return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");}
+let subs=JSON.parse(localStorage.getItem("subs")||"[]");
 
-function saveProfile(){
- profile={
-  name:pname.value,
-  phone:pphone.value,
-  note:pnote.value
- };
- localStorage.setItem("profile",JSON.stringify(profile));
- alert("تم حفظ Profil");
+function save(){
+ localStorage.setItem("subs",JSON.stringify(subs));
 }
 
-function loadProfile(){
- pname.value=profile.name||"";
- pphone.value=profile.phone||"";
- pnote.value=profile.note||"";
+function fmt(d){
+ return d.getFullYear()+"/"+
+ String(d.getMonth()+1).padStart(2,"0")+"/"+
+ String(d.getDate()).padStart(2,"0");
 }
 
-function add(){
- if(!name.value||!phone.value||!product.value||!price.value||!days.value){
-  alert("املأ جميع الحقول");return;
+function addSub(){
+ if(
+  !nameInput.value ||
+  !phoneInput.value ||
+  !productInput.value ||
+  priceInput.value<=0 ||
+  daysInput.value<=0
+ ){
+  alert("عمّر الحقول اللازمة");
+  return;
  }
- let end=new Date();
- end.setDate(end.getDate()+ +days.value);
+
+ let start=new Date(); start.setHours(0,0,0,0);
+ let end=new Date(start);
+ end.setDate(end.getDate()+Number(daysInput.value));
 
  subs.push({
   id:Date.now(),
-  name:name.value,
-  phone:phone.value,
-  email:email.value,
-  product:product.value,
-  price:+price.value,
-  paid:paid.value==="true",
-  end:end.toISOString()
+  name:nameInput.value,
+  phone:phoneInput.value,
+  email:emailInput.value,
+  profil:profilInput.value,
+  product:productInput.value,
+  price:Number(priceInput.value),
+  end:end.toISOString(),
+  paid:false
  });
- save();render();
- name.value=phone.value=email.value=product.value=price.value=days.value="";
- paid.value="true";
+
+ save();
+ nameInput.value=phoneInput.value=emailInput.value=profilInput.value=priceInput.value=daysInput.value="";
+ productInput.value="";
+ render();
+}
+
+function togglePaid(id){
+ let s=subs.find(x=>x.id===id);
+ s.paid=!s.paid;
+ save(); render();
+}
+
+function editSub(id){
+ let s=subs.find(x=>x.id===id);
+
+ let n=prompt("الاسم",s.name); if(n===null)return;
+ let p=prompt("الهاتف",s.phone); if(p===null)return;
+ let e=prompt("Email",s.email||""); if(e===null)return;
+ let pr=prompt("Profil",s.profil||""); if(pr===null)return;
+ let prod=prompt("المنتج",s.product); if(prod===null)return;
+ let price=prompt("السعر",s.price); if(price===null)return;
+
+ s.name=n;
+ s.phone=p;
+ s.email=e;
+ s.profil=pr;
+ s.product=prod;
+ s.price=Number(price);
+
+ save(); render();
+}
+
+function deleteSub(id){
+ if(!confirm("حذف؟"))return;
+ subs=subs.filter(x=>x.id!==id);
+ save(); render();
 }
 
 function render(){
  list.innerHTML="";
- let q=search.value.toLowerCase();
- let today=new Date();
+ let today=new Date(); today.setHours(0,0,0,0);
 
  subs.forEach(s=>{
-  if(q && !(`${s.name} ${s.phone}`.toLowerCase().includes(q))) return;
-  let end=new Date(s.end);
-  let diff=Math.ceil((end-today)/86400000);
-  let tr=document.createElement("tr");
+  let end=new Date(s.end); end.setHours(0,0,0,0);
+  let diff=Math.floor((end-today)/86400000);
 
-  if(!s.paid) tr.classList.add("unpaid");
-  if(diff<=0) tr.classList.add("danger");
-  else if(diff<=3) tr.classList.add("warn");
+  let tr=document.createElement("tr");
+  if(diff<0)tr.classList.add("danger");
+  else if(diff<=3)tr.classList.add("warn");
+  if(!s.paid)tr.classList.add("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
+<td>${s.email||"-"}</td>
+<td>${s.profil||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price} دج</td>
+<td>${s.price}</td>
 <td>${fmt(end)}</td>
-<td>${s.paid?"✅":"❌"}</td>
-<td class="actions">
- <button onclick="edit(${s.id})">✏️</button>
- <button onclick="del(${s.id})">🗑</button>
+<td>
+ <span class="days-box ${
+  diff<0?'days-expired':diff<=3?'days-warn':'days-ok'
+ }">${diff}</span>
+</td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
+<td>
+ <button onclick="editSub(${s.id})">✏️</button>
+ <button onclick="deleteSub(${s.id})">🗑</button>
 </td>`;
   list.appendChild(tr);
  });
 }
 
-function edit(id){
- let s=subs.find(x=>x.id===id);
- let n=prompt("الاسم",s.name);
- let p=prompt("الهاتف",s.phone);
- let e=prompt("الإيميل",s.email);
- let pr=prompt("المنتج",s.product);
- let priceNew=prompt("السعر",s.price);
- let daysNew=prompt("المدة بالأيام",30);
- let paidNew=confirm("هل مدفوع؟");
-
- if(n) s.name=n;
- if(p) s.phone=p;
- if(e) s.email=e;
- if(pr) s.product=pr;
- if(priceNew) s.price=+priceNew;
- if(daysNew){
-  let d=new Date();
-  d.setDate(d.getDate()+ +daysNew);
-  s.end=d.toISOString();
- }
- s.paid=paidNew;
- save();render();
-}
-
-function del(id){
- if(!confirm("حذف الاشتراك؟"))return;
- subs=subs.filter(x=>x.id!==id);
- save();render();
-}
-
-function toggleMode(){document.body.classList.toggle("dark");}
-
-loadProfile();
 render();
 </script>
 
