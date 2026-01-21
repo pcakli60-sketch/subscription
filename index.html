@@ -21,7 +21,11 @@ body{
  padding:15px;
 }
 
-h2{text-align:center;color:var(--main)}
+h2{
+ text-align:center;
+ color:var(--main);
+ margin-bottom:10px;
+}
 
 .card{
  background:var(--card);
@@ -32,7 +36,7 @@ h2{text-align:center;color:var(--main)}
 
 input,select,button{
  width:100%;
- padding:10px;
+remember padding:10px;
  margin:5px 0;
  font-size:14px;
 }
@@ -51,26 +55,31 @@ button{
  flex-wrap:wrap;
 }
 
-.stats div{
+.filters button,.stats div{
  flex:1;
+}
+
+.stats div{
  background:#eef3fa;
  padding:10px;
  border-radius:6px;
  text-align:center;
 }
 
+.table-wrapper{overflow-x:auto}
+
 table{
  width:100%;
  border-collapse:collapse;
- min-width:1000px;
+ min-width:1100px;
 }
 
 th,td{
  border:1px solid #ccc;
  padding:6px;
  text-align:center;
- font-size:13px;
  white-space:nowrap;
+ font-size:13px;
 }
 
 th{background:var(--main);color:#fff}
@@ -79,20 +88,33 @@ th{background:var(--main);color:#fff}
 .danger{background:var(--danger)}
 .unpaid{background:var(--unpaid)}
 
-.days{
+.actions{
+ position:sticky;
+ right:0;
+ background:#fff;
+ z-index:2;
+}
+
+.actions button{
+ padding:5px 8px;
+ margin:2px;
+}
+
+/* الأيام */
+.days-box{
  padding:4px 8px;
  border-radius:12px;
  font-weight:bold;
 }
-.ok{background:#e8f5e9;color:#2e7d32}
-.warnDays{background:#fff3e0;color:#ef6c00}
-.expired{background:#fdecea;color:#c62828}
+.days-ok{background:#e8f5e9;color:#2e7d32}
+.days-warn{background:#fff3e0;color:#ef6c00}
+.days-expired{background:#fdecea;color:#c62828}
 </style>
 </head>
 
 <body>
 
-<h2>📊 إدارة الاشتراكات</h2>
+<h2>إدارة الاشتراكات</h2>
 
 <input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل" onkeyup="render()">
 
@@ -101,7 +123,6 @@ th{background:var(--main);color:#fff}
  <button onclick="setFilter('active')">نشط</button>
  <button onclick="setFilter('expired')">منتهي</button>
  <button onclick="setFilter('unpaid')">غير مدفوع</button>
- <button onclick="toggleNotify()">🔔 التنبيهات</button>
 </div>
 
 <div class="card stats">
@@ -113,30 +134,28 @@ th{background:var(--main);color:#fff}
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
- <input id="phone" type="tel" placeholder="الهاتف">
+ <input id="phone" placeholder="الهاتف">
  <input id="email" placeholder="Email">
+ <input id="profile" placeholder="Profil (اختياري)">
  <select id="product">
   <option value="">المنتج</option>
   <option>Netflix</option>
   <option>Shahid</option>
   <option>IPTV</option>
  </select>
- <input id="price" type="number" placeholder="السعر">
- <input id="days" type="number" placeholder="عدد الأيام">
+ <input id="price" type="number" placeholder="السعر (دج)">
+ <input id="days" type="number" placeholder="عدد أيام الاشتراك">
  <button onclick="addSub()">➕ إضافة اشتراك</button>
 </div>
 
-<div class="card">
- <button onclick="exportData()">📤 تصدير نسخة</button>
- <input type="file" onchange="importData(this)" />
-</div>
-
-<div class="card" style="overflow:auto">
+<div class="card table-wrapper">
 <table>
 <thead>
 <tr>
  <th>الاسم</th>
  <th>الهاتف</th>
+ <th>Email</th>
+ <th>Profil</th>
  <th>المنتج</th>
  <th>السعر</th>
  <th>الانتهاء</th>
@@ -150,109 +169,175 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-let subs=JSON.parse(localStorage.getItem("subs")||"[]");
-let filter="all";
-let notify=false;
+const nameInput   = document.getElementById("name");
+const phoneInput  = document.getElementById("phone");
+const emailInput  = document.getElementById("email");
+const profileInput= document.getElementById("profile");
+const productInput= document.getElementById("product");
+const priceInput  = document.getElementById("price");
+const daysInput   = document.getElementById("days");
+const searchInput = document.getElementById("search");
+const list        = document.getElementById("list");
 
-const qs=id=>document.getElementById(id);
-const safe=t=>t.replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c]));
+const stTotal   = document.getElementById("stTotal");
+const stActive  = document.getElementById("stActive");
+const stExpired = document.getElementById("stExpired");
+const stUnpaid  = document.getElementById("stUnpaid");
 
-function save(){localStorage.setItem("subs",JSON.stringify(subs));}
-function setFilter(f){filter=f;render();}
-function toggleNotify(){notify=!notify;alert(notify?"تم تفعيل التنبيهات":"تم إيقاف التنبيهات");}
+let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let currentFilter="all";
 
-function addSub(){
- if(!name.value||!phone.value||!product.value||days.value<=0)return alert("أكمل البيانات");
- let start=new Date();start.setHours(0,0,0,0);
- let end=new Date(start);end.setDate(end.getDate()+Number(days.value));
- subs.push({
-  id:Date.now(),
-  name:safe(name.value),
-  phone:safe(phone.value),
-  product:product.value,
-  price:price.value,
-  end:end.toISOString(),
-  paid:false,n3:false,n0:false
- });
- save();location.reload();
+function save(){
+ localStorage.setItem("subs",JSON.stringify(subs));
 }
 
-function renew(id){
- let d=prompt("عدد أيام التجديد"); if(!d)return;
+function setFilter(f){
+ currentFilter=f;
+ render();
+}
+
+function fmt(d){
+ return d.getFullYear()+"/"+
+ String(d.getMonth()+1).padStart(2,"0")+"/"+
+ String(d.getDate()).padStart(2,"0");
+}
+
+function addSub(){
+ if(
+  nameInput.value.trim()==="" ||
+  phoneInput.value.trim()==="" ||
+  productInput.value==="" ||
+  Number(priceInput.value)<=0 ||
+  Number(daysInput.value)<=0
+ ){
+  alert("يرجى ملء الحقول الأساسية");
+  return;
+ }
+
+ let start=new Date(); start.setHours(0,0,0,0);
+ let end=new Date(start);
+ end.setDate(end.getDate()+Number(daysInput.value));
+
+ subs.push({
+  id:Date.now(),
+  name:nameInput.value,
+  phone:phoneInput.value,
+  email:emailInput.value,
+  profile:profileInput.value,
+  product:productInput.value,
+  price:priceInput.value,
+  end:end.toISOString(),
+  paid:false,
+  n3:false,
+  n0:false
+ });
+
+ save();
+ nameInput.value=phoneInput.value=emailInput.value=priceInput.value=daysInput.value=profileInput.value="";
+ productInput.value="";
+ render();
+}
+
+function togglePaid(id){
  let s=subs.find(x=>x.id===id);
- let e=new Date(s.end); e.setDate(e.getDate()+Number(d));
- s.end=e.toISOString(); s.n3=s.n0=false;
- save();render();
+ s.paid=!s.paid;
+ save(); render();
+}
+
+function editSub(id){
+ let s=subs.find(x=>x.id===id);
+
+ let n=prompt("الاسم",s.name); if(!n)return;
+ let p=prompt("الهاتف",s.phone); if(!p)return;
+ let e=prompt("Email",s.email||""); if(e===null)return;
+ let pr=prompt("Profil",s.profile||""); if(pr===null)return;
+ let price=prompt("السعر",s.price); if(!price)return;
+
+ s.name=n;
+ s.phone=p;
+ s.email=e;
+ s.profile=pr;
+ s.price=price;
+
+ save(); render();
+}
+
+function remember renewSub(id){
+ let s=subs.find(x=>x.id===id);
+ let days=prompt("أدخل عدد أيام التجديد:");
+ if(!days || isNaN(days) || days<=0)return;
+
+ let today=new Date(); today.setHours(0,0,0,0);
+ let end=new Date(s.end); end.setHours(0,0,0,0);
+ if(end<today) end=today;
+
+ end.setDate(end.getDate()+Number(days));
+
+ s.end=end.toISOString();
+ s.n3=false;
+ s.n0=false;
+
+ save(); render();
+}
+
+function deleteSub(id){
+ if(!confirm("تأكيد الحذف؟"))return;
+ subs=subs.filter(x=>x.id!==id);
+ save(); render();
 }
 
 function render(){
- let list=qs("list"); list.innerHTML="";
- let today=new Date();today.setHours(0,0,0,0);
- subs.sort((a,b)=>new Date(a.end)-new Date(b.end));
+ list.innerHTML="";
+ let today=new Date(); today.setHours(0,0,0,0);
+ let q=searchInput.value.toLowerCase();
 
- let t=0,a=0,e=0,u=0;
+ let total=0,active=0,expired=0,unpaid=0;
 
  subs.forEach(s=>{
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
-  t++; diff<0?e++:a++; if(!s.paid)u++;
+  total++;
+  diff<0?expired++:active++;
+  if(!s.paid) unpaid++;
 
-  if(filter==="active"&&diff<0)return;
-  if(filter==="expired"&&diff>=0)return;
-  if(filter==="unpaid"&&s.paid)return;
+  if(currentFilter==="active" && diff<0)return;
+  if(currentFilter==="expired" && diff>=0)return;
+  if(currentFilter==="unpaid" && s.paid)return;
 
-  if(notify){
-   if(diff===3&&!s.n3){send(s,diff);s.n3=true}
-   if(diff===0&&!s.n0){send(s,diff);s.n0=true}
-  }
+  if(q && !(`${s.name}${s.phone}${s.email}`.toLowerCase().includes(q)))return;
 
-  let cls=diff<0?"expired":diff<=3?"warnDays":"ok";
+  let tr=document.createElement("tr");
+  if(diff<0)tr.classList.add("danger");
+  else if(diff<=3)tr.classList.add("warn");
+  if(!s.paid)tr.classList.add("unpaid");
 
-  list.innerHTML+=`
-<tr class="${diff<0?'danger':diff<=3?'warn':''} ${!s.paid?'unpaid':''}">
+  tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
+<td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price}</td>
-<td>${end.toLocaleDateString()}</td>
-<td><span class="days ${cls}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="s=subs.find(x=>x.id===${s.id});s.paid=!s.paid;save();render()"></td>
-<td>
-<button onclick="send(subs.find(x=>x.id===${s.id}),${diff})">💬</button>
-<button onclick="renew(${s.id})">♻️</button>
-<button onclick="subs=subs.filter(x=>x.id!==${s.id});save();render()">🗑</button>
-</td>
-</tr>`;
+<td>${s.price} دج</td>
+<td>${fmt(end)}</td>
+<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
+<td class="actions">
+ <button onclick="renewSub(${s.id})">🔄</button>
+ <button onclick="editSub(${s.id})">✏️</button>
+ <button onclick="deleteSub(${s.id})">🗑</button>
+</td>`;
+  list.appendChild(tr);
  });
 
- stTotal.textContent=t;
- stActive.textContent=a;
- stExpired.textContent=e;
- stUnpaid.textContent=u;
-}
-
-function send(s,d){
- let msg=`مرحباً ${s.name}
-اشتراك ${s.product}
-${d<=0?"منتهي":"ينتهي قريباً"}
-الأيام: ${d}`;
- window.open(`https://wa.me/${s.phone}?text=${encodeURIComponent(msg)}`);
-}
-
-function exportData(){
- let b=new Blob([JSON.stringify(subs)],{type:"application/json"});
- let a=document.createElement("a");
- a.href=URL.createObjectURL(b); a.download="backup.json"; a.click();
-}
-
-function importData(i){
- let r=new FileReader();
- r.onload=()=>{subs=JSON.parse(r.result);save();render();}
- r.readAsText(i.files[0]);
+ stTotal.textContent=total;
+ stActive.textContent=active;
+ stExpired.textContent=expired;
+ stUnpaid.textContent=unpaid;
 }
 
 render();
 </script>
+
 </body>
 </html>
