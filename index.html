@@ -39,7 +39,7 @@ th{background:var(--main);color:#fff}
 
 <h2>إدارة الاشتراكات</h2>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل / Profil" onkeyup="render()">
+<input id="search" placeholder="بحث..." onkeyup="render()">
 
 <div class="filters">
  <button onclick="setFilter('all')">الكل</button>
@@ -91,53 +91,60 @@ th{background:var(--main);color:#fff}
 </table>
 </div>
 
-<script>
+<!-- 🔹 Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import {
+ getFirestore, collection, addDoc, getDocs,
+ updateDoc, deleteDoc, doc
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+
+/* 🔐 Firebase config */
+const firebaseConfig = {
+ apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
+ authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
+ projectId: "systeme-des-abonnements-6a98c",
+ storageBucket: "systeme-des-abonnements-6a98c.appspot.com",
+ messagingSenderId: "74948745712",
+ appId: "1:74948745712:web:ea9140bdf7dafb85baa535"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ================== APP ================== */
+
 const $ = id => document.getElementById(id);
-let subs = JSON.parse(localStorage.getItem("subs") || "[]");
+let subs = [];
 let currentFilter = "all";
 
-function save(){
- localStorage.setItem("subs", JSON.stringify(subs));
-}
-
-function setFilter(f){
- currentFilter = f;
+/* تحميل البيانات */
+async function loadSubs(){
+ subs = [];
+ const snap = await getDocs(collection(db,"subs"));
+ snap.forEach(d => subs.push({ id:d.id, ...d.data() }));
  render();
 }
 
+/* فلترة */
+function setFilter(f){ currentFilter=f; render(); }
+
+/* تنسيق تاريخ */
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
+/* WhatsApp */
 function sendWhatsApp(phone,name,product,end,days){
  if(!phone) return;
-
- let msg =
-`مرحباً ${name} 👋
-
-اشتراكك في خدمة ${product}
-${days>=0
- ? "سينتهي بتاريخ "+end+" ⏰\n⏳ الأيام المتبقية: "+days+" أيام"
- : "قد انتهى بتاريخ "+end+" ❌"}
-
-يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
-نحن في خدمتكم دائماً 🌟`;
-
+ let msg=`مرحباً ${name} 👋\n\nاشتراكك في ${product}\n${days>=0?
+ "ينتهي بتاريخ "+end+" ⏰\nالأيام المتبقية: "+days :
+ "انتهى بتاريخ "+end+" ❌"}\n\nنحن في خدمتكم 🌟`;
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
-function whatsappById(id){
- let s = subs.find(x => x.id === id);
- if(!s) return;
-
- let today=new Date(); today.setHours(0,0,0,0);
- let end=new Date(s.end); end.setHours(0,0,0,0);
- let diff=Math.floor((end-today)/86400000);
-
- sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-}
-
-function addSub(){
+/* إضافة */
+async function addSub(){
  let name=$("name").value.trim();
  let phone=$("phone").value.trim();
  let email=$("email").value.trim();
@@ -146,77 +153,72 @@ function addSub(){
  let price=$("price").value;
  let days=Number($("days").value);
 
- if(!name || !phone || !product || days<=0){
-  alert("يرجى ملء الحقول الأساسية");
-  return;
- }
+ if(!name||!phone||!product||days<=0)
+  return alert("يرجى ملء الحقول الأساسية");
 
  let start=new Date(); start.setHours(0,0,0,0);
  let end=new Date(start); end.setDate(end.getDate()+days);
 
- subs.push({
-  id:Date.now(),
+ await addDoc(collection(db,"subs"),{
   name,phone,email,profile,product,price,
-  end:end.toISOString(),
-  paid:false
+  end:end.toISOString(), paid:false
  });
 
- save();
  ["name","phone","email","profile","price","days"].forEach(i=>$(i).value="");
  $("product").value="";
- render();
+ loadSubs();
 }
 
-function editSub(id){
+/* تعديل */
+async function editSub(id){
  let s=subs.find(x=>x.id===id);
  if(!s) return;
 
- s.name=prompt("الاسم",s.name) || s.name;
- s.phone=prompt("الهاتف",s.phone) || s.phone;
- s.email=prompt("Email",s.email) || s.email;
- s.profile=prompt("Profil",s.profile) || s.profile;
- s.price=prompt("السعر",s.price) || s.price;
+ let name=prompt("الاسم",s.name) || s.name;
+ let phone=prompt("الهاتف",s.phone) || s.phone;
+ let email=prompt("Email",s.email) || s.email;
+ let profile=prompt("Profil",s.profile) || s.profile;
+ let price=prompt("السعر",s.price) || s.price;
 
- save();
- render();
+ await updateDoc(doc(db,"subs",id),{name,phone,email,profile,price});
+ loadSubs();
 }
 
-function renewSub(id){
+/* تجديد */
+async function renewSub(id){
  let s=subs.find(x=>x.id===id);
  if(!s) return;
 
  let d=Number(prompt("عدد أيام التجديد"));
- if(!d || d<=0) return;
+ if(!d||d<=0) return;
 
  let end=new Date(s.end);
  let today=new Date(); today.setHours(0,0,0,0);
-
- if(end < today) end = today;
+ if(end<today) end=today;
  end.setDate(end.getDate()+d);
- s.end = end.toISOString();
 
- save();
- render();
+ await updateDoc(doc(db,"subs",id),{end:end.toISOString()});
+ loadSubs();
 
  let diff=Math.floor((end-today)/86400000);
  sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
 }
 
-function togglePaid(id){
- let s=subs.find(x=>x.id===id);
- if(!s) return;
- s.paid=!s.paid;
- save();
- render();
+/* دفع */
+async function togglePaid(id,val){
+ await updateDoc(doc(db,"subs",id),{paid:val});
+ loadSubs();
 }
 
-function deleteSub(id){
- if(!confirm("تأكيد حذف هذا العميل؟")) return;
- subs=subs.filter(x=>x.id!==id);
- save();
- render();
+/* حذف */
+async function deleteSub(id){
+ if(confirm("تأكيد الحذف؟")){
+  await deleteDoc(doc(db,"subs",id));
+  loadSubs();
+ }
 }
 
+/* عرض */
 function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
@@ -228,9 +230,7 @@ function render(){
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
 
-  t++;
-  if(diff<0) e++; else a++;
-  if(!s.paid) u++;
+  t++; diff<0?e++:a++; if(!s.paid)u++;
 
   if(currentFilter==="active" && diff<0) return;
   if(currentFilter==="expired" && diff>=0) return;
@@ -238,10 +238,9 @@ function render(){
   if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q))) return;
 
   let tr=document.createElement("tr");
-
-  if(diff<0) tr.classList.add("danger");
-  else if(diff<=3) tr.classList.add("warn");
-  if(!s.paid) tr.classList.add("unpaid");
+  if(diff<0)tr.classList.add("danger");
+  else if(diff<=3)tr.classList.add("warn");
+  if(!s.paid)tr.classList.add("unpaid");
 
   tr.innerHTML=`
 <td>${s.name}</td>
@@ -252,12 +251,13 @@ function render(){
 <td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
+<td><input type="checkbox" ${s.paid?"checked":""}
+ onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
- <button onclick="whatsappById(${s.id})">💬</button>
- <button onclick="editSub(${s.id})">✏️</button>
- <button onclick="renewSub(${s.id})">🔄</button>
- <button onclick="deleteSub(${s.id})">🗑</button>
+ <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
+ <button onclick="editSub('${s.id}')">✏️</button>
+ <button onclick="renewSub('${s.id}')">🔄</button>
+ <button onclick="deleteSub('${s.id}')">🗑</button>
 </td>`;
   $("list").appendChild(tr);
  });
@@ -268,7 +268,13 @@ function render(){
  $("stUnpaid").textContent=u;
 }
 
-render();
+/* ربط الدوال بالـ window */
+Object.assign(window,{
+ addSub,editSub,renewSub,deleteSub,
+ togglePaid,setFilter,sendWhatsApp
+});
+
+loadSubs();
 </script>
 
 </body>
