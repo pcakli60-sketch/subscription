@@ -13,19 +13,11 @@ body{
  font-family:Arial;background:var(--bg);color:var(--text);
  padding:20px;transition:.3s
 }
-.dark{
- --bg:#121212;--card:#1e1e1e;--text:#eee
-}
+.dark{--bg:#121212;--card:#1e1e1e;--text:#eee}
 h2{text-align:center;color:var(--main)}
-.card{
- background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px
-}
-input,select,button{
- width:100%;padding:10px;margin:5px 0;border-radius:5px
-}
-button{
- background:var(--main);color:#fff;border:none;cursor:pointer
-}
+.card{background:var(--card);padding:15px;border-radius:8px;margin-bottom:15px}
+input,select,button{width:100%;padding:10px;margin:5px 0;border-radius:5px}
+button{background:var(--main);color:#fff;border:none;cursor:pointer}
 table{width:100%;border-collapse:collapse}
 th,td{border:1px solid #ccc;padding:8px;text-align:center}
 th{background:var(--main);color:#fff}
@@ -35,7 +27,6 @@ th{background:var(--main);color:#fff}
 .actions button{margin:2px;padding:5px}
 .top{display:flex;gap:10px;flex-wrap:wrap}
 .stat{padding:6px}
-.filter button{background:#555}
 </style>
 </head>
 
@@ -43,12 +34,9 @@ th{background:var(--main);color:#fff}
 
 <div class="top">
   <button onclick="toggleMode()">🌙 الوضع الليلي</button>
+  <button onclick="filterUnpaid()">❌ غير مدفوع</button>
+  <button onclick="clearFilter()">📋 الكل</button>
   <input id="search" placeholder="بحث بالاسم أو الهاتف" onkeyup="render()">
-</div>
-
-<div class="filter">
-  <button onclick="filter='all';render()">📋 الكل</button>
-  <button onclick="filter='unpaid';render()">❌ غير مدفوع</button>
 </div>
 
 <h2>نظام إدارة الاشتراكات</h2>
@@ -56,7 +44,7 @@ th{background:var(--main);color:#fff}
 <div class="card">
   <input id="name" placeholder="اسم الزبون">
   <input id="phone" placeholder="رقم الهاتف">
-  <input id="email" placeholder="E-mail الحساب">
+  <input id="email" placeholder="E-mail">
   <select id="product">
     <option value="">اختر المنتج</option>
     <option>Netflix</option>
@@ -69,7 +57,7 @@ th{background:var(--main);color:#fff}
     <option value="true">مدفوع ✅</option>
     <option value="false">غير مدفوع ❌</option>
   </select>
-  <button onclick="add()">➕ إضافة اشتراك</button>
+  <button onclick="add()">➕ إضافة</button>
 </div>
 
 <div class="card">
@@ -95,31 +83,40 @@ th{background:var(--main);color:#fff}
 </div>
 
 <script>
-if("Notification"in window && Notification.permission!=="granted"){
- Notification.requestPermission();
+let subs = JSON.parse(localStorage.getItem("subs")||"[]");
+let showUnpaidOnly = false;
+
+function save(){
+ localStorage.setItem("subs",JSON.stringify(subs));
 }
-
-let subs=JSON.parse(localStorage.getItem("subs")||"[]");
-let filter="all";
-
-function save(){localStorage.setItem("subs",JSON.stringify(subs));}
 
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
 function add(){
- let n=name.value.trim(),p=phone.value.trim(),e=email.value.trim();
- let pr=product.value,price=+priceInput.value||+price.value,d=+days.value;
- let paidVal=paid.value==="true";
- if(!n||!p||!pr||!price||!d){alert("املأ جميع الحقول");return;}
- let end=new Date();end.setDate(end.getDate()+d);
+ let n=name.value.trim(), p=phone.value.trim(), e=email.value.trim();
+ let pr=product.value, priceVal=+price.value, d=+days.value;
+ let paidVal = paid.value==="true";
+
+ if(!n||!p||!pr||!priceVal||!d){
+  alert("املأ جميع الحقول");
+  return;
+ }
+
+ let end=new Date();
+ end.setDate(end.getDate()+d);
+
  subs.push({
-  id:Date.now(),name:n,phone:p,email:e,product:pr,
-  price,paid:paidVal,end:end.toISOString(),
-  created:new Date().toISOString(),notified:false
+  id:Date.now(),
+  name:n, phone:p, email:e,
+  product:pr, price:priceVal,
+  paid:paidVal,
+  end:end.toISOString(),
+  created:new Date().toISOString()
  });
- save();render();
+
+ save(); render();
  name.value=phone.value=email.value=product.value=price.value=days.value="";
  paid.value="true";
 }
@@ -128,19 +125,19 @@ function render(){
  list.innerHTML="";
  let q=search.value.toLowerCase();
  let today=new Date();
+
  subs.forEach(s=>{
-  if(filter==="unpaid" && s.paid) return;
+  if(showUnpaidOnly && s.paid) return;
   if(q && !(`${s.name} ${s.phone}`.toLowerCase().includes(q))) return;
+
   let end=new Date(s.end);
   let diff=Math.ceil((end-today)/86400000);
   let tr=document.createElement("tr");
+
   if(!s.paid) tr.classList.add("unpaid");
   if(diff<=0) tr.classList.add("danger");
   else if(diff<=3) tr.classList.add("warn");
-  if(!s.paid && !s.notified && Notification.permission==="granted"){
-   new Notification("❌ اشتراك غير مدفوع",{body:`${s.name} - ${s.product}`});
-   s.notified=true;save();
-  }
+
   tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
@@ -149,49 +146,64 @@ function render(){
 <td>${fmt(end)}</td>
 <td>${s.paid?"✅":"❌"}</td>
 <td class="actions">
-<button onclick="edit(${s.id})">✏️</button>
-<button onclick="togglePaid(${s.id})">💰</button>
-<button onclick="del(${s.id})">🗑</button>
+ <button onclick="edit(${s.id})">✏️</button>
+ <button onclick="togglePaid(${s.id})">💰</button>
+ <button onclick="del(${s.id})">🗑</button>
 </td>`;
   list.appendChild(tr);
  });
- renderStats();
-}
 
-function togglePaid(id){
- let s=subs.find(x=>x.id===id);
- s.paid=!s.paid;s.notified=false;save();render();
+ renderStats();
 }
 
 function edit(id){
  let s=subs.find(x=>x.id===id);
+ let n=prompt("الاسم",s.name);
+ let p=prompt("الهاتف",s.phone);
+ let pr=prompt("المنتج",s.product);
  let priceNew=prompt("السعر",s.price);
- let daysNew=prompt("مدة بالأيام",30);
+ let daysNew=prompt("المدة بالأيام",30);
+
+ if(n) s.name=n;
+ if(p) s.phone=p;
+ if(pr) s.product=pr;
  if(priceNew) s.price=+priceNew;
  if(daysNew){
   let d=new Date();
   d.setDate(d.getDate()+ +daysNew);
   s.end=d.toISOString();
  }
- save();render();
+
+ save(); render();
+}
+
+function togglePaid(id){
+ let s=subs.find(x=>x.id===id);
+ s.paid=!s.paid;
+ save(); render();
 }
 
 function del(id){
- if(!confirm("حذف الاشتراك؟"))return;
- subs=subs.filter(x=>x.id!==id);save();render();
+ if(!confirm("حذف الاشتراك؟")) return;
+ subs=subs.filter(x=>x.id!==id);
+ save(); render();
 }
 
 function renderStats(){
  let today=new Date();
- let day=0,month=0,year=0,debt=0;
+ let day=0, month=0, year=0, debt=0;
+
  subs.forEach(s=>{
   let c=new Date(s.created);
   if(s.paid){
    if(c.toDateString()===today.toDateString()) day+=s.price;
    if(c.getMonth()===today.getMonth()) month+=s.price;
    if(c.getFullYear()===today.getFullYear()) year+=s.price;
-  }else debt+=s.price;
+  }else{
+   debt+=s.price;
+  }
  });
+
  stats.innerHTML=`
 💰 اليوم: ${day} دج<br>
 📆 الشهر: ${month} دج<br>
@@ -200,6 +212,8 @@ function renderStats(){
 `;
 }
 
+function filterUnpaid(){showUnpaidOnly=true;render();}
+function clearFilter(){showUnpaidOnly=false;render();}
 function toggleMode(){document.body.classList.toggle("dark");}
 
 render();
