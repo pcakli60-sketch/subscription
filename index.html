@@ -164,8 +164,30 @@ function setFilter(f){currentFilter=f;render();}
 function fmt(d){return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");}
 
 /* WhatsApp */
-function sendWhatsApp(phone,name,product,end,days){
- let msg=`مرحباً ${name} 👋
+
+ function sendWhatsApp(phone, name, product, end, days){
+ if(!phone) return;
+
+ // ✅ حماية: إذا الخدمة فارغة
+ product = product || "الخدمة";
+
+ let msg = "";
+
+ // 🔴 رسالة الاشتراك المنتهي
+ if(days < 0){
+  msg =
+`مرحباً ${name} 👋
+
+⚠️ اشتراكك في خدمة ${product} قد انتهى
+📅 بتاريخ: ${end}
+
+يرجى التواصل معنا لتجديد الاشتراك في أقرب وقت 🔄
+نحن في خدمتكم دائماً 🌟`;
+ }
+ // 🟢 رسالة الاشتراك النشط
+ else{
+  msg =
+`مرحباً ${name} 👋
 
 اشتراكك في خدمة ${product}
 سينتهي بتاريخ ${end} ⏰
@@ -173,7 +195,12 @@ function sendWhatsApp(phone,name,product,end,days){
 
 يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
 نحن في خدمتكم دائماً 🌟`;
- window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+ }
+
+ window.open(
+  "https://wa.me/"+phone+"?text="+encodeURIComponent(msg),
+  "_blank"
+ );
 }
 
 /* CRUD */
@@ -193,9 +220,22 @@ async function addSub(){
 }
 
 async function editSub(id){
- let s=subs.find(x=>x.id===id);
- let name=prompt("الاسم",s.name) || s.name;
- await updateDoc(doc(db,"subs",id),{name});
+ async function editSub(id){
+ let s = subs.find(x => x.id === id);
+ if(!s) return;
+
+ let name    = prompt("الاسم", s.name);
+ let phone   = prompt("الهاتف", s.phone);
+ let product = prompt("الخدمة (Netflix / IPTV ...)", s.product);
+ let price   = prompt("السعر", s.price);
+
+ await updateDoc(doc(db,"subs",id),{
+  name:    name    || s.name,
+  phone:   phone   || s.phone,
+  product: product || s.product,
+  price:   price   || s.price
+ });
+
  loadSubs();
 }
 
