@@ -6,12 +6,8 @@
 
 <style>
 :root{
- --main:#1976d2;
- --bg:#f4f6f9;
- --card:#fff;
- --warn:#fff3cd;
- --danger:#f8d7da;
- --unpaid:#fdecea;
+ --main:#1976d2; --bg:#f4f6f9; --card:#fff;
+ --warn:#fff3cd; --danger:#f8d7da; --unpaid:#fdecea;
 }
 body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
 h2{text-align:center;color:var(--main)}
@@ -24,9 +20,7 @@ button{background:var(--main);color:#fff;border:none;border-radius:5px;cursor:po
 table{width:100%;border-collapse:collapse;min-width:1200px}
 th,td{border:1px solid #ccc;padding:6px;text-align:center;font-size:13px}
 th{background:var(--main);color:#fff}
-.warn{background:var(--warn)}
-.danger{background:var(--danger)}
-.unpaid{background:var(--unpaid)}
+.warn{background:var(--warn)} .danger{background:var(--danger)} .unpaid{background:var(--unpaid)}
 .actions button{padding:5px 8px;margin:2px}
 .days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
 .days-ok{background:#e8f5e9;color:#2e7d32}
@@ -37,6 +31,21 @@ th{background:var(--main);color:#fff}
 </head>
 
 <body>
+
+<!-- 🔐 LOGIN -->
+<div id="loginBox" style="max-width:400px;margin:100px auto;text-align:center">
+ <h2>🔐 تسجيل الدخول</h2>
+ <input id="loginEmail" type="email" placeholder="E-mail">
+ <input id="loginPass" type="password" placeholder="Mot de passe">
+ <button onclick="loginEmail()">دخول</button>
+ <br><br>
+ <button onclick="registerEmail()" style="background:#555">
+  إنشاء حساب (مرة واحدة)
+ </button>
+</div>
+
+<!-- 🔓 APP -->
+<div id="app" style="display:none">
 
 <h2>إدارة الاشتراكات</h2>
 
@@ -56,9 +65,7 @@ th{background:var(--main);color:#fff}
  <div>❌ غير مدفوع<br><b id="stUnpaid">0</b></div>
 </div>
 
-<button class="alert-btn" onclick="sendTodayAlerts()">
-📩 إرسال تنبيهات الاشتراكات القريبة
-</button>
+<button class="alert-btn" onclick="sendTodayAlerts()">📩 إرسال تنبيهات الاشتراكات القريبة</button>
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
@@ -80,30 +87,27 @@ th{background:var(--main);color:#fff}
 <table>
 <thead>
 <tr>
- <th>الاسم</th>
- <th>الهاتف</th>
- <th>Email</th>
- <th>Profil</th>
- <th>المنتج</th>
- <th>السعر</th>
- <th>الانتهاء</th>
- <th>⏳ الأيام</th>
- <th>مدفوع</th>
- <th>إجراءات</th>
+ <th>الاسم</th><th>الهاتف</th><th>Email</th><th>Profil</th>
+ <th>المنتج</th><th>السعر</th><th>الانتهاء</th>
+ <th>⏳ الأيام</th><th>مدفوع</th><th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
 </table>
 </div>
 
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc }
+from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
 import {
- getFirestore, collection, addDoc, getDocs,
- updateDoc, deleteDoc, doc
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+ getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+ onAuthStateChanged, setPersistence, browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-/* Firebase config */
+/* Firebase */
 const firebaseConfig = {
  apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
  authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -115,31 +119,39 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence);
 
 const $ = id => document.getElementById(id);
-let subs = [];
-let currentFilter = "all";
+let subs=[], currentFilter="all";
 
-/* تحميل */
+/* LOGIN */
+async function loginEmail(){
+ await signInWithEmailAndPassword(
+  auth,$("loginEmail").value,$("loginPass").value
+ );
+}
+async function registerEmail(){
+ await createUserWithEmailAndPassword(
+  auth,$("loginEmail").value,$("loginPass").value
+ );
+}
+onAuthStateChanged(auth,user=>{
+ if(user){ $("loginBox").style.display="none"; $("app").style.display="block"; loadSubs(); }
+ else{ $("loginBox").style.display="block"; $("app").style.display="none"; }
+});
+
+/* DATA */
 async function loadSubs(){
- subs = [];
- const snap = await getDocs(collection(db,"subs"));
- snap.forEach(d => subs.push({ id:d.id, ...d.data() }));
- render();
+ subs=[]; const snap=await getDocs(collection(db,"subs"));
+ snap.forEach(d=>subs.push({id:d.id,...d.data()})); render();
 }
-
-/* فلترة */
-function setFilter(f){ currentFilter=f; render(); }
-
-/* تاريخ */
-function fmt(d){
- return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
-}
+function setFilter(f){currentFilter=f;render();}
+function fmt(d){return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");}
 
 /* WhatsApp */
 function sendWhatsApp(phone,name,product,end,days){
- let msg =
-`مرحباً ${name} 👋
+ let msg=`مرحباً ${name} 👋
 
 اشتراكك في خدمة ${product}
 سينتهي بتاريخ ${end} ⏰
@@ -147,146 +159,61 @@ function sendWhatsApp(phone,name,product,end,days){
 
 يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
 نحن في خدمتكم دائماً 🌟`;
-
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
-/* إضافة */
+/* CRUD */
 async function addSub(){
- let name=$("name").value.trim();
- let phone=$("phone").value.trim();
- let email=$("email").value.trim();
- let profile=$("profile").value.trim();
- let product=$("product").value;
- let price=$("price").value;
  let days=parseInt($("days").value,10);
-
- if(!name||!phone||!product||!days){
-  alert("يرجى ملء الحقول الأساسية");
-  return;
- }
-
- let start=new Date(); start.setHours(0,0,0,0);
- let end=new Date(start); end.setDate(end.getDate()+days);
-
+ if(!$("name").value||!$("phone").value||!$("product").value||!days) return alert("يرجى ملء الحقول");
+ let end=new Date(); end.setDate(end.getDate()+days);
  await addDoc(collection(db,"subs"),{
-  name,phone,email,profile,product,price,
-  end:end.toISOString(),
-  paid:false
+  name:$("name").value, phone:$("phone").value, email:$("email").value,
+  profile:$("profile").value, product:$("product").value,
+  price:$("price").value, end:end.toISOString(), paid:false
  });
-
- ["name","phone","email","profile","price","days"].forEach(i=>$(i).value="");
- $("product").value="";
  loadSubs();
 }
-
-/* ✏️ تعديل */
 async function editSub(id){
  let s=subs.find(x=>x.id===id);
- if(!s) return;
-
- let name=prompt("الاسم",s.name) ?? s.name;
- let phone=prompt("الهاتف",s.phone) ?? s.phone;
- let email=prompt("Email",s.email) ?? s.email;
- let profile=prompt("Profil",s.profile) ?? s.profile;
- let price=prompt("السعر",s.price) ?? s.price;
-
- await updateDoc(doc(db,"subs",id),{
-  name,phone,email,profile,price
- });
-
+ await updateDoc(doc(db,"subs",id),{name:prompt("الاسم",s.name)||s.name});
  loadSubs();
 }
-
-/* 🔄 تجديد (أنت تحدد الأيام) */
 async function renewSub(id){
  let s=subs.find(x=>x.id===id);
- if(!s) return;
-
- let d=parseInt(prompt("عدد أيام التجديد"),10);
- if(!d||d<=0) return;
-
- let end=new Date(s.end);
- let today=new Date(); today.setHours(0,0,0,0);
- if(end<today) end=today;
- end.setDate(end.getDate()+d);
-
- await updateDoc(doc(db,"subs",id),{
-  end:end.toISOString()
- });
-
- loadSubs();
-
- let diff=Math.floor((end-today)/86400000);
- sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+ let d=parseInt(prompt("عدد أيام التجديد"),10); if(!d) return;
+ let end=new Date(s.end); end.setDate(end.getDate()+d);
+ await updateDoc(doc(db,"subs",id),{end:end.toISOString()}); loadSubs();
 }
-
-/* مدفوع */
-async function togglePaid(id,val){
- await updateDoc(doc(db,"subs",id),{paid:val});
- loadSubs();
-}
-
-/* 🗑 حذف */
 async function deleteSub(id){
- if(!confirm("تأكيد حذف هذا العميل؟")) return;
- await deleteDoc(doc(db,"subs",id));
- loadSubs();
+ if(confirm("حذف؟")){ await deleteDoc(doc(db,"subs",id)); loadSubs(); }
+}
+async function togglePaid(id,val){
+ await updateDoc(doc(db,"subs",id),{paid:val}); loadSubs();
 }
 
-/* 🔔 تنبيهات */
+/* Alerts */
 function sendTodayAlerts(){
  let today=new Date(); today.setHours(0,0,0,0);
- let found=false;
-
  subs.forEach(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-
-  if(diff===3){
-   sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
-   found=true;
-  }
+  let end=new Date(s.end); let diff=Math.floor((end-today)/86400000);
+  if(diff===3) sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
  });
-
- if(!found) alert("ما كاش اشتراكات قريبة تنتهي خلال 3 أيام");
 }
 
-/* عرض */
+/* Render */
 function render(){
  $("list").innerHTML="";
  let today=new Date(); today.setHours(0,0,0,0);
- let q=$("search").value.toLowerCase();
-
- let t=0,a=0,e=0,u=0;
-
  subs.forEach(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-
-  t++; diff<0?e++:a++; if(!s.paid)u++;
-
-  if(currentFilter==="active" && diff<0) return;
-  if(currentFilter==="expired" && diff>=0) return;
-  if(currentFilter==="unpaid" && s.paid) return;
-  if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q))) return;
-
+  let end=new Date(s.end); let diff=Math.floor((end-today)/86400000);
   let tr=document.createElement("tr");
-  if(diff<0)tr.classList.add("danger");
-  else if(diff<=3)tr.classList.add("warn");
-  if(!s.paid)tr.classList.add("unpaid");
-
   tr.innerHTML=`
-<td>${s.name}</td>
-<td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td>
-<td>${s.product}</td>
-<td>${s.price||"-"}</td>
+<td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
-<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""}
- onclick="togglePaid('${s.id}',this.checked)"></td>
+<td><span class="days-box">${diff}</span></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
  <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
  <button onclick="editSub('${s.id}')">✏️</button>
@@ -295,20 +222,12 @@ function render(){
 </td>`;
   $("list").appendChild(tr);
  });
-
- $("stTotal").textContent=t;
- $("stActive").textContent=a;
- $("stExpired").textContent=e;
- $("stUnpaid").textContent=u;
 }
 
-/* ربط */
 Object.assign(window,{
- addSub,editSub,renewSub,deleteSub,
- togglePaid,setFilter,sendWhatsApp,sendTodayAlerts
+ loginEmail,registerEmail,addSub,editSub,renewSub,
+ deleteSub,togglePaid,setFilter,sendWhatsApp,sendTodayAlerts
 });
-
-loadSubs();
 </script>
 
 </body>
