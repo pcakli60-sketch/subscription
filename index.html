@@ -126,6 +126,17 @@ ${days>=0
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
+function whatsappById(id){
+ let s = subs.find(x => x.id === id);
+ if(!s) return;
+
+ let today=new Date(); today.setHours(0,0,0,0);
+ let end=new Date(s.end); end.setHours(0,0,0,0);
+ let diff=Math.floor((end-today)/86400000);
+
+ sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+}
+
 function addSub(){
  let name=$("name").value.trim();
  let phone=$("phone").value.trim();
@@ -194,14 +205,14 @@ function renewSub(id){
 function togglePaid(id){
  let s=subs.find(x=>x.id===id);
  if(!s) return;
- s.paid = !s.paid;
+ s.paid=!s.paid;
  save();
  render();
 }
 
 function deleteSub(id){
  if(!confirm("تأكيد حذف هذا العميل؟")) return;
- subs = subs.filter(x=>x.id!==id);
+ subs=subs.filter(x=>x.id!==id);
  save();
  render();
 }
@@ -241,11 +252,9 @@ function render(){
 <td>${s.price||"-"}</td>
 <td>${fmt(end)}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td>
- <input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})">
-</td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid(${s.id})"></td>
 <td class="actions">
- <button onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
+ <button onclick="whatsappById(${s.id})">💬</button>
  <button onclick="editSub(${s.id})">✏️</button>
  <button onclick="renewSub(${s.id})">🔄</button>
  <button onclick="deleteSub(${s.id})">🗑</button>
