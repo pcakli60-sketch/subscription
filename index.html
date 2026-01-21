@@ -255,7 +255,11 @@ function sendWhatsApp(phone,name,product,end,days){
 async function addSub(){
  let days=parseInt($("days").value,10);
  if(!days||!$("name").value||!$("phone").value||!$("product").value) return;
- let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
+
+ let end=new Date();
+ end.setHours(0,0,0,0);
+ end.setDate(end.getDate()+days);
+
  await addDoc(collection(db,"subs"),{
   name:$("name").value,
   phone:$("phone").value,
@@ -268,7 +272,18 @@ async function addSub(){
   alert3Sent:false,
   alertExpiredSent:false
  });
+
+ // 🔄 إعادة تحميل الجدول
  loadSubs();
+
+ // 🧹 تفريغ الخانات
+ $("name").value = "";
+ $("phone").value = "";
+ $("email").value = "";
+ $("profile").value = "";
+ $("product").value = "";
+ $("price").value = "";
+ $("days").value = "";
 }
 
 async function editSub(id){
