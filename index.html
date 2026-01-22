@@ -14,7 +14,6 @@
  --card:#ffffff;
  --unpaid:#fdecea;
 }
-
 body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
 h2{text-align:center;color:var(--main)}
 
@@ -25,75 +24,38 @@ h2{text-align:center;color:var(--main)}
  margin-bottom:15px;
  box-shadow:0 2px 6px rgba(0,0,0,.05)
 }
-
 input,select,button{
- width:100%;
- padding:10px;
- margin:5px 0;
- font-size:14px
+ width:100%;padding:10px;margin:5px 0;font-size:14px
 }
-
 button{
- border:none;
- border-radius:6px;
- cursor:pointer;
- color:#fff
+ border:none;border-radius:6px;cursor:pointer;color:#fff
 }
-
 .main{background:var(--main)}
 .success{background:var(--success)}
 .warning{background:var(--warning)}
 .danger{background:var(--danger)}
 
-.filters,.stats{
- display:flex;
- gap:5px;
- flex-wrap:wrap
-}
+.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
 .filters button,.stats div{flex:1}
-
 .stats div{
- background:#eef3fa;
- padding:10px;
- border-radius:8px;
- text-align:center;
- font-weight:bold
+ background:#eef3fa;padding:10px;border-radius:8px;text-align:center;font-weight:bold
 }
 
-table{
- width:100%;
- border-collapse:collapse;
- min-width:1200px
-}
-th,td{
- border:1px solid #ddd;
- padding:6px;
- text-align:center;
- font-size:13px
-}
+table{width:100%;border-collapse:collapse;min-width:1200px}
+th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
 th{background:var(--main);color:#fff}
 
-/* تلوين الصفوف */
 .row-ok{background:#e8f5e9}
 .row-warn{background:#fff3e0}
 .row-expired{background:#fdecea}
 .row-unpaid{background:var(--unpaid)}
 
-.days-box{
- padding:4px 8px;
- border-radius:12px;
- font-weight:bold
-}
+.days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
 .days-ok{background:#c8e6c9;color:var(--success)}
 .days-warn{background:#ffe0b2;color:var(--warning)}
 .days-expired{background:#ffcdd2;color:var(--danger)}
 
-.actions button{
- padding:5px 8px;
- margin:2px;
- font-size:13px
-}
-
+.actions button{padding:5px 8px;margin:2px;font-size:13px}
 .logout{background:var(--danger);width:auto;padding:6px 12px}
 .alert-btn{background:var(--warning);margin-bottom:10px}
 </style>
@@ -155,16 +117,9 @@ th{background:var(--main);color:#fff}
 <table>
 <thead>
 <tr>
- <th>الاسم</th>
- <th>الهاتف</th>
- <th>Email</th>
- <th>Profil</th>
- <th>الخدمة</th>
- <th>السعر</th>
- <th>الانتهاء</th>
- <th>⏳ الأيام</th>
- <th>مدفوع</th>
- <th>إجراءات</th>
+ <th>الاسم</th><th>الهاتف</th><th>Email</th><th>Profil</th>
+ <th>الخدمة</th><th>السعر</th><th>الانتهاء</th>
+ <th>⏳ الأيام</th><th>مدفوع</th><th>إجراءات</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -182,7 +137,7 @@ import {
  onAuthStateChanged, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-/* Firebase config */
+/* Firebase */
 const firebaseConfig = {
  apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
  authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -204,8 +159,8 @@ async function login(){
 async function logout(){ await signOut(auth); }
 
 onAuthStateChanged(auth,user=>{
- $("loginBox").style.display = user ? "none" : "block";
- $("app").style.display = user ? "block" : "none";
+ $("loginBox").style.display=user?"none":"block";
+ $("app").style.display=user?"block":"none";
  if(user) loadSubs();
 });
 
@@ -217,32 +172,37 @@ async function loadSubs(){
  render();
 }
 
-/* Helpers */
+/* DATE */
+function calcDays(endISO){
+ let end=new Date(endISO); end.setHours(0,0,0,0);
+ let today=new Date(); today.setHours(0,0,0,0);
+ let diff=Math.ceil((end-today)/86400000);
+ if(end<today) diff=-1;
+ return diff;
+}
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
-/* WhatsApp (Emoji Unicode مضمون) */
+/* WhatsApp */
 function sendWhatsApp(phone,name,product,end,days){
  let msg="";
- if(days < 0){
-  msg =
-`مرحباً ${name} \u{1F44B}
+ if(days<0){
+  msg=`مرحباً ${name} 👋
 
-\u{26A0} اشتراكك في خدمة ${product} قد انتهى
-\u{1F4C5} بتاريخ: ${end}
+⚠️ اشتراكك في خدمة ${product} قد انتهى
+📅 بتاريخ: ${end}
 
-يرجى التواصل معنا لتجديد الاشتراك \u{1F504}
-نحن في خدمتكم دائماً \u{1F31F}`;
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟`;
  }else{
-  msg =
-`مرحباً ${name} \u{1F44B}
+  msg=`مرحباً ${name} 👋
 
 اشتراكك في خدمة ${product}
-سينتهي بتاريخ ${end} \u{23F0}
-\u{23F3} الأيام المتبقية: ${days} أيام
+سينتهي بتاريخ ${end} ⏰
+⏳ الأيام المتبقية: ${days} أيام
 
-نحن في خدمتكم دائماً \u{1F31F}`;
+نحن في خدمتكم دائماً 🌟`;
  }
  window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
@@ -250,7 +210,7 @@ function sendWhatsApp(phone,name,product,end,days){
 /* CRUD */
 async function addSub(){
  let days=parseInt($("days").value,10);
- if(!days||!$("name").value||!$("phone").value||!$("product").value) return;
+ if(!days||!$("name").value||!$("phone").value||!$("product").value)return;
 
  let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
 
@@ -266,12 +226,8 @@ async function addSub(){
   alert3Sent:false,
   alertExpiredSent:false
  });
-
- loadSubs();
-
- // تفريغ الخانات
- ["name","phone","email","profile","product","price","days"]
- .forEach(i=>$(i).value="");
+ await loadSubs();
+ ["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
 }
 
 async function editSub(id){
@@ -290,18 +246,13 @@ async function editSub(id){
 async function renewSub(id){
  let s=subs.find(x=>x.id===id);
  let d=parseInt(prompt("عدد أيام التجديد"),10);
- if(!d) return;
-
- let end=new Date(s.end);
- end.setHours(0,0,0,0);
- end.setDate(end.getDate()+d);
-
+ if(!d)return;
+ let end=new Date(s.end); end.setDate(end.getDate()+d);
  await updateDoc(doc(db,"subs",id),{
   end:end.toISOString(),
   alert3Sent:false,
   alertExpiredSent:false
  });
-
  await loadSubs();
 }
 
@@ -319,24 +270,19 @@ async function togglePaid(id,val){
 
 /* ALERTS */
 async function sendAlerts(){
- let today=new Date(); today.setHours(0,0,0,0);
-
  for(let s of subs){
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-
+  let diff=calcDays(s.end);
   if(diff===3 && !s.alert3Sent){
-   sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+   sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
    await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
+   break;
   }
-
   if(diff<0 && !s.alertExpiredSent){
-   sendWhatsApp(s.phone,s.name,s.product,fmt(end),diff);
+   sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
    await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
+   break;
   }
  }
-
- await loadSubs();
 }
 
 /* FILTER + RENDER */
@@ -344,14 +290,11 @@ function setFilter(f){currentFilter=f;render();}
 
 function render(){
  $("list").innerHTML="";
- let today=new Date(); today.setHours(0,0,0,0);
  let q=$("search").value.toLowerCase();
  let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
-  let end=new Date(s.end); end.setHours(0,0,0,0);
-  let diff=Math.floor((end-today)/86400000);
-
+  let diff=calcDays(s.end);
   t++; diff<0?e++:a++; if(!s.paid)u++;
 
   if(currentFilter==="active"&&diff<0)return;
@@ -360,24 +303,19 @@ function render(){
   if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
 
   let tr=document.createElement("tr");
-
-  if(!s.paid) tr.classList.add("row-unpaid");
-  else if(diff<0) tr.classList.add("row-expired");
-  else if(diff<=3) tr.classList.add("row-warn");
-  else tr.classList.add("row-ok");
+  if(!s.paid) tr.className="row-unpaid";
+  else if(diff<0) tr.className="row-expired";
+  else if(diff<=3) tr.className="row-warn";
+  else tr.className="row-ok";
 
   tr.innerHTML=`
-<td>${s.name}</td>
-<td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td>
-<td>${s.product}</td>
-<td>${s.price||"-"}</td>
-<td>${fmt(end)}</td>
+<td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
+<td>${fmt(new Date(s.end))}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
- <button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(end)}',${diff})">💬</button>
+ <button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(new Date(s.end))}',${diff})">💬</button>
  <button class="main" onclick="editSub('${s.id}')">✏️</button>
  <button class="warning" onclick="renewSub('${s.id}')">🔄</button>
  <button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
