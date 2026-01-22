@@ -25,7 +25,10 @@ h2{text-align:center;color:var(--main)}
  box-shadow:0 2px 6px rgba(0,0,0,.05)
 }
 input,select,button{
- width:100%;padding:10px;margin:5px 0;font-size:14px
+ width:100%;
+ padding:10px;
+ margin:5px 0;
+ font-size:14px
 }
 button{
  border:none;border-radius:6px;cursor:pointer;color:#fff
@@ -38,7 +41,8 @@ button{
 .filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
 .filters button,.stats div{flex:1}
 .stats div{
- background:#eef3fa;padding:10px;border-radius:8px;text-align:center;font-weight:bold
+ background:#eef3fa;padding:10px;border-radius:8px;
+ text-align:center;font-weight:bold
 }
 
 table{width:100%;border-collapse:collapse;min-width:1200px}
@@ -79,7 +83,9 @@ th{background:var(--main);color:#fff}
  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / Email / Profil" onkeyup="render()">
+<input id="search"
+ placeholder="بحث بالاسم / الهاتف / Email / Profil"
+ onkeyup="onSearch(this.value)">
 
 <div class="filters">
  <button class="main" onclick="setFilter('all')">الكل</button>
@@ -150,7 +156,7 @@ const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
 
 const $ = id => document.getElementById(id);
-let subs=[], currentFilter="all";
+let subs=[], currentFilter="all", searchText="";
 
 /* AUTH */
 async function login(){
@@ -169,6 +175,12 @@ async function loadSubs(){
  subs=[];
  const snap=await getDocs(collection(db,"subs"));
  snap.forEach(d=>subs.push({id:d.id,...d.data()}));
+ render();
+}
+
+/* SEARCH */
+function onSearch(val){
+ searchText = val.toLowerCase();
  render();
 }
 
@@ -290,7 +302,6 @@ function setFilter(f){currentFilter=f;render();}
 
 function render(){
  $("list").innerHTML="";
- let q=$("search").value.toLowerCase();
  let t=0,a=0,e=0,u=0;
 
  subs.forEach(s=>{
@@ -300,7 +311,7 @@ function render(){
   if(currentFilter==="active"&&diff<0)return;
   if(currentFilter==="expired"&&diff>=0)return;
   if(currentFilter==="unpaid"&&s.paid)return;
-  if(q && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(q)))return;
+  if(searchText && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(searchText)))return;
 
   let tr=document.createElement("tr");
   if(!s.paid) tr.className="row-unpaid";
@@ -331,7 +342,8 @@ function render(){
 
 Object.assign(window,{
  login,logout,addSub,editSub,renewSub,
- deleteSub,togglePaid,setFilter,sendWhatsApp,sendAlerts
+ deleteSub,togglePaid,setFilter,onSearch,
+ sendWhatsApp,sendAlerts
 });
 </script>
 
