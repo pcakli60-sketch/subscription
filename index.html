@@ -105,7 +105,7 @@ th{background:var(--main);color:#fff}
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
- <input id="phone" placeholder="الهاتف (213xxxxxxxxx)">
+ <input id="phone" placeholder="الهاتف (مثال: 213xxxxxxxxx)">
  <input id="email" placeholder="Email">
  <input id="profile" placeholder="Profil">
  <select id="product">
@@ -184,37 +184,58 @@ function onSearch(val){
  render();
 }
 
-/* DAYS CALC (✔️ بدون نقصان) */
+/* DATE */
 function calcDays(endISO){
- const today=new Date(); today.setHours(0,0,0,0);
- const end=new Date(endISO); end.setHours(0,0,0,0);
- return Math.ceil((end-today)/86400000);
+  const today = new Date();
+  today.setHours(0,0,0,0);   // تثبيت اليوم
+
+  const end = new Date(endISO);
+  end.setHours(0,0,0,0);     // تثبيت الانتهاء
+
+  return Math.round((end - today) / 86400000);
 }
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
 /* WhatsApp */
-function sendWhatsApp(phone,name,product,end,days){
- product=product||"الخدمة";
- let msg = days<0 ?
-`مرحباً ${name} 👋
+function sendWhatsApp(phone, name, product, end, days){
+ if(!phone) return;
 
-⚠️ انتهى اشتراكك في خدمة ${product}
+ product = product || "الخدمة";
+
+ let msg = "";
+
+ // 🔴 اشتراك منتهي
+ if(days < 0){
+  msg = `مرحباً ${name} 👋
+
+⚠️ قد انتهى اشتراكك في خدمة ${product}
 📅 بتاريخ: ${end}
 
-يرجى التواصل معنا للتجديد 🔄
-— Yazid STORE`
-:
-`مرحباً ${name} 👋
-
-اشتراكك في خدمة ${product}
-ينتهي بتاريخ ${end} ⏰
-⏳ الأيام المتبقية: ${days}
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟
 
 — Yazid STORE`;
+ }
+ // 🟢 اشتراك مازال نشط
+ else{
+  msg = `مرحباً ${name} 👋
 
- window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+اشتراكك في خدمة ${product}
+سينتهي بتاريخ ${end} ⏰
+⏳ الأيام المتبقية: ${days} أيام
+
+يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
+نحن في خدمتكم دائماً 🌟
+
+— Yazid STORE`;
+ }
+
+ window.open(
+  "https://wa.me/" + phone + "?text=" + encodeURIComponent(msg),
+  "_blank"
+ );
 }
 
 /* CRUD */
@@ -222,8 +243,7 @@ async function addSub(){
  let days=parseInt($("days").value,10);
  if(!days||!$("name").value||!$("phone").value||!$("product").value)return;
 
- let end=new Date(); end.setHours(0,0,0,0);
- end.setDate(end.getDate()+days);
+ let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
 
  await addDoc(collection(db,"subs"),{
   name:$("name").value,
@@ -233,19 +253,37 @@ async function addSub(){
   product:$("product").value,
   price:$("price").value,
   end:end.toISOString(),
-  paid:false
+  paid:false,
+  alert3Sent:false,
+  alertExpiredSent:false
  });
  await loadSubs();
  ["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
+}
+
+async function editSub(id){
+ let s=subs.find(x=>x.id===id);
+ await updateDoc(doc(db,"subs",id),{
+  name:prompt("الاسم",s.name)||s.name,
+  phone:prompt("الهاتف",s.phone)||s.phone,
+  email:prompt("Email",s.email)||s.email,
+  profile:prompt("Profil",s.profile)||s.profile,
+  product:prompt("الخدمة",s.product)||s.product,
+  price:prompt("السعر",s.price)||s.price
+ });
+ await loadSubs();
 }
 
 async function renewSub(id){
  let s=subs.find(x=>x.id===id);
  let d=parseInt(prompt("عدد أيام التجديد"),10);
  if(!d)return;
- let end=new Date(s.end); end.setHours(0,0,0,0);
- end.setDate(end.getDate()+d);
- await updateDoc(doc(db,"subs",id),{end:end.toISOString()});
+ let end=new Date(s.end); end.setDate(end.getDate()+d);
+ await updateDoc(doc(db,"subs",id),{
+  end:end.toISOString(),
+  alert3Sent:false,
+  alertExpiredSent:false
+ });
  await loadSubs();
 }
 
@@ -253,6 +291,28 @@ async function deleteSub(id){
  if(confirm("حذف الاشتراك؟")){
   await deleteDoc(doc(db,"subs",id));
   await loadSubs();
+ }
+}
+
+async function togglePaid(id,val){
+ await updateDoc(doc(db,"subs",id),{paid:val});
+ await loadSubs();
+}
+
+/* ALERTS */
+async function sendAlerts(){
+ for(let s of subs){
+  let diff=calcDays(s.end);
+  if(diff===3 && !s.alert3Sent){
+   sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
+   await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
+   break;
+  }
+  if(diff<0 && !s.alertExpiredSent){
+   sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
+   await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
+   break;
+  }
  }
 }
 
@@ -273,16 +333,20 @@ function render(){
   if(searchText && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(searchText)))return;
 
   let tr=document.createElement("tr");
-  tr.className = !s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
+  if(!s.paid) tr.className="row-unpaid";
+  else if(diff<0) tr.className="row-expired";
+  else if(diff<=3) tr.className="row-warn";
+  else tr.className="row-ok";
 
   tr.innerHTML=`
 <td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
 <td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
 <td>${fmt(new Date(s.end))}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td>${s.paid?"✔️":"❌"}</td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
  <button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(new Date(s.end))}',${diff})">💬</button>
+ <button class="main" onclick="editSub('${s.id}')">✏️</button>
  <button class="warning" onclick="renewSub('${s.id}')">🔄</button>
  <button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
 </td>`;
@@ -296,8 +360,9 @@ function render(){
 }
 
 Object.assign(window,{
- login,logout,addSub,renewSub,deleteSub,
- setFilter,onSearch,sendWhatsApp
+ login,logout,addSub,editSub,renewSub,
+ deleteSub,togglePaid,setFilter,onSearch,
+ sendWhatsApp,sendAlerts
 });
 </script>
 
