@@ -50,7 +50,6 @@ button{
  gap:5px;
  flex-wrap:wrap
 }
-
 .filters button,.stats div{flex:1}
 
 .stats div{
@@ -66,20 +65,18 @@ table{
  border-collapse:collapse;
  min-width:1200px
 }
-
 th,td{
  border:1px solid #ddd;
  padding:6px;
  text-align:center;
  font-size:13px
 }
-
 th{background:var(--main);color:#fff}
 
-/* 🔴🟠🟢 تلوين الصفوف */
-.row-expired{background:#fdecea}
-.row-warn{background:#fff3e0}
+/* تلوين الصفوف */
 .row-ok{background:#e8f5e9}
+.row-warn{background:#fff3e0}
+.row-expired{background:#fdecea}
 .row-unpaid{background:var(--unpaid)}
 
 .days-box{
@@ -87,7 +84,6 @@ th{background:var(--main);color:#fff}
  border-radius:12px;
  font-weight:bold
 }
-
 .days-ok{background:#c8e6c9;color:var(--success)}
 .days-warn{background:#ffe0b2;color:var(--warning)}
 .days-expired{background:#ffcdd2;color:var(--danger)}
@@ -121,7 +117,7 @@ th{background:var(--main);color:#fff}
  <button class="logout" onclick="logout()">Logout</button>
 </div>
 
-<input id="search" placeholder="بحث بالاسم / الهاتف / الإيميل / Profil" onkeyup="render()">
+<input id="search" placeholder="بحث بالاسم / الهاتف / Email / Profil" onkeyup="render()">
 
 <div class="filters">
  <button class="main" onclick="setFilter('all')">الكل</button>
@@ -141,7 +137,7 @@ th{background:var(--main);color:#fff}
 
 <div class="card">
  <input id="name" placeholder="اسم الزبون">
- <input id="phone" placeholder="الهاتف">
+ <input id="phone" placeholder="الهاتف (مثال: 213xxxxxxxxx)">
  <input id="email" placeholder="Email">
  <input id="profile" placeholder="Profil">
  <select id="product">
@@ -186,7 +182,7 @@ import {
  onAuthStateChanged, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-/* Firebase */
+/* Firebase config */
 const firebaseConfig = {
  apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
  authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -221,12 +217,12 @@ async function loadSubs(){
  render();
 }
 
-/* HELPERS */
+/* Helpers */
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
 
-/* WHATSAPP (Emoji Unicode) */
+/* WhatsApp (Emoji Unicode مضمون) */
 function sendWhatsApp(phone,name,product,end,days){
  let msg="";
  if(days < 0){
@@ -256,9 +252,7 @@ async function addSub(){
  let days=parseInt($("days").value,10);
  if(!days||!$("name").value||!$("phone").value||!$("product").value) return;
 
- let end=new Date();
- end.setHours(0,0,0,0);
- end.setDate(end.getDate()+days);
+ let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
 
  await addDoc(collection(db,"subs"),{
   name:$("name").value,
@@ -273,17 +267,11 @@ async function addSub(){
   alertExpiredSent:false
  });
 
- // 🔄 إعادة تحميل الجدول
  loadSubs();
 
- // 🧹 تفريغ الخانات
- $("name").value = "";
- $("phone").value = "";
- $("email").value = "";
- $("profile").value = "";
- $("product").value = "";
- $("price").value = "";
- $("days").value = "";
+ // تفريغ الخانات
+ ["name","phone","email","profile","product","price","days"]
+ .forEach(i=>$(i).value="");
 }
 
 async function editSub(id){
@@ -296,37 +284,43 @@ async function editSub(id){
   product:prompt("الخدمة",s.product)||s.product,
   price:prompt("السعر",s.price)||s.price
  });
- loadSubs();
+ await loadSubs();
 }
 
 async function renewSub(id){
  let s=subs.find(x=>x.id===id);
  let d=parseInt(prompt("عدد أيام التجديد"),10);
  if(!d) return;
- let end=new Date(s.end); end.setDate(end.getDate()+d);
+
+ let end=new Date(s.end);
+ end.setHours(0,0,0,0);
+ end.setDate(end.getDate()+d);
+
  await updateDoc(doc(db,"subs",id),{
   end:end.toISOString(),
   alert3Sent:false,
   alertExpiredSent:false
  });
- loadSubs();
+
+ await loadSubs();
 }
 
 async function deleteSub(id){
  if(confirm("حذف الاشتراك؟")){
   await deleteDoc(doc(db,"subs",id));
-  loadSubs();
+  await loadSubs();
  }
 }
 
 async function togglePaid(id,val){
  await updateDoc(doc(db,"subs",id),{paid:val});
- loadSubs();
+ await loadSubs();
 }
 
 /* ALERTS */
 async function sendAlerts(){
  let today=new Date(); today.setHours(0,0,0,0);
+
  for(let s of subs){
   let end=new Date(s.end); end.setHours(0,0,0,0);
   let diff=Math.floor((end-today)/86400000);
@@ -341,6 +335,8 @@ async function sendAlerts(){
    await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
   }
  }
+
+ await loadSubs();
 }
 
 /* FILTER + RENDER */
