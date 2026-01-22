@@ -185,13 +185,24 @@ render();
 
 /* ✅ FIXED DAYS CALC */
 function calcDays(endISO){
-const now = new Date();
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+ const now = new Date();
 
-const end = new Date(endISO);
-const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23,59,59);
+ // اليوم (بداية اليوم)
+ const today = new Date(
+  now.getFullYear(),
+  now.getMonth(),
+  now.getDate()
+ );
 
-return Math.ceil((endDay - today) / 86400000);
+ // تاريخ الانتهاء (بداية اليوم)
+ const end = new Date(endISO);
+ const endDay = new Date(
+  end.getFullYear(),
+  end.getMonth(),
+  end.getDate()
+ );
+
+ return Math.round((endDay - today) / 86400000);
 }
 
 function fmt(d){
@@ -200,26 +211,61 @@ return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.g
 
 /* WhatsApp */
 function sendWhatsApp(phone, name, product, end, days){
-if(!phone) return;
-product = product || "الخدمة";
-let msg = days < 0 ?
-`مرحباً ${name} 👋
+ if(!phone) return;
 
-⚠️ انتهى اشتراكك في ${product}
+ // تنظيف رقم الهاتف
+ phone = phone.replace(/\s|\+/g, "");
+
+ product = product || "الخدمة";
+ name = name || "زبوننا الكريم";
+
+ let msg = "";
+
+ // 🔴 اشتراك منتهي
+ if(days < 0){
+  msg = `مرحباً ${name} 👋
+
+⚠️ قد انتهى اشتراكك في خدمة ${product}
 📅 بتاريخ: ${end}
 
-يرجى التواصل معنا للتجديد 🔄
-— Yazid STORE`
-:
-`مرحباً ${name} 👋
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟
 
-اشتراك ${product}
-📅 ينتهي: ${end}
-⏳ المتبقي: ${days} أيام
-
-نحن في خدمتكم 🌟
 — Yazid STORE`;
+ }
 
+ // 🟠 ينتهي اليوم
+ else if(days === 0){
+  msg = `مرحباً ${name} 👋
+
+⏰ اشتراكك في خدمة ${product}
+📅 ينتهي اليوم: ${end}
+
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟
+
+— Yazid STORE`;
+ }
+
+ // 🟢 اشتراك مازال نشط
+ else{
+  msg = `مرحباً ${name} 👋
+
+اشتراكك في خدمة ${product}
+📅 سينتهي بتاريخ: ${end}
+⏳ الأيام المتبقية: ${days} يوم${days > 1 ? "اً" : ""}
+
+يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
+نحن في خدمتكم دائماً 🌟
+
+— Yazid STORE`;
+ }
+
+ window.open(
+  "https://wa.me/" + phone + "?text=" + encodeURIComponent(msg),
+  "_blank"
+ );
+}
 window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
