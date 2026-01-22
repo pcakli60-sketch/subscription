@@ -143,6 +143,7 @@ getAuth, signInWithEmailAndPassword, signOut,
 onAuthStateChanged, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
+/* Firebase */
 const firebaseConfig = {
 apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
 authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -183,17 +184,16 @@ searchText = val.toLowerCase();
 render();
 }
 
-/* ✅ FIXED DAYS CALC */
+/* DATE */
 function calcDays(endISO){
-const now = new Date();
-const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const today = new Date();
+today.setHours(0,0,0,0); // تثبيت اليوم
 
 const end = new Date(endISO);
-const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23,59,59);
+end.setHours(0,0,0,0); // تثبيت الانتهاء
 
-return Math.ceil((endDay - today) / 86400000);
+return Math.round((end - today) / 86400000);
 }
-
 function fmt(d){
 return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
 }
@@ -201,36 +201,49 @@ return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.g
 /* WhatsApp */
 function sendWhatsApp(phone, name, product, end, days){
 if(!phone) return;
-product = product || "الخدمة";
-let msg = days < 0 ?
-`مرحباً ${name} 👋
 
-⚠️ انتهى اشتراكك في ${product}
+product = product || "الخدمة";
+
+let msg = "";
+
+// 🔴 اشتراك منتهي
+if(days < 0){
+msg = `مرحباً ${name} 👋
+
+⚠️ قد انتهى اشتراكك في خدمة ${product}
 📅 بتاريخ: ${end}
 
-يرجى التواصل معنا للتجديد 🔄
-— Yazid STORE`
-:
-`مرحباً ${name} 👋
+يرجى التواصل معنا لتجديد الاشتراك 🔄
+نحن في خدمتكم دائماً 🌟
 
-اشتراك ${product}
-📅 ينتهي: ${end}
-⏳ المتبقي: ${days} أيام
-
-نحن في خدمتكم 🌟
 — Yazid STORE`;
+}
+// 🟢 اشتراك مازال نشط
+else{
+msg = `مرحباً ${name} 👋
 
-window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+اشتراكك في خدمة ${product}
+سينتهي بتاريخ ${end} ⏰
+⏳ الأيام المتبقية: ${days} أيام
+
+يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
+نحن في خدمتكم دائماً 🌟
+
+— Yazid STORE`;
+}
+
+window.open(
+"https://wa.me/" + phone + "?text=" + encodeURIComponent(msg),
+"_blank"
+);
 }
 
 /* CRUD */
 async function addSub(){
-let d=parseInt($("days").value,10);
-if(!d||!$("name").value||!$("phone").value||!$("product").value)return;
+let days=parseInt($("days").value,10);
+if(!days||!$("name").value||!$("phone").value||!$("product").value)return;
 
-let end=new Date();
-end.setHours(23,59,59,999);
-end.setDate(end.getDate()+d);
+let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
 
 await addDoc(collection(db,"subs"),{
 name:$("name").value,
@@ -265,11 +278,7 @@ async function renewSub(id){
 let s=subs.find(x=>x.id===id);
 let d=parseInt(prompt("عدد أيام التجديد"),10);
 if(!d)return;
-
-let end=new Date(s.end);
-end.setDate(end.getDate()+d);
-end.setHours(23,59,59,999);
-
+let end=new Date(s.end); end.setDate(end.getDate()+d);
 await updateDoc(doc(db,"subs",id),{
 end:end.toISOString(),
 alert3Sent:false,
@@ -297,10 +306,12 @@ let diff=calcDays(s.end);
 if(diff===3 && !s.alert3Sent){
 sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
 await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
+break;
 }
 if(diff<0 && !s.alertExpiredSent){
 sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
 await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
+break;
 }
 }
 }
@@ -322,7 +333,10 @@ if(currentFilter==="unpaid"&&s.paid)return;
 if(searchText && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(searchText)))return;
 
 let tr=document.createElement("tr");
-tr.className=!s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
+if(!s.paid) tr.className="row-unpaid";
+else if(diff<0) tr.className="row-expired";
+else if(diff<=3) tr.className="row-warn";
+else tr.className="row-ok";
 
 tr.innerHTML=`
 <td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
