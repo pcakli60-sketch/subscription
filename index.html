@@ -16,61 +16,32 @@
 }
 body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
 h2{text-align:center;color:var(--main)}
-
-.card{
-background:var(--card);
-padding:15px;
-border-radius:10px;
-margin-bottom:15px;
-box-shadow:0 2px 6px rgba(0,0,0,.05)
-}
-input,select,button{
-width:100%;
-padding:10px;
-margin:5px 0;
-font-size:14px
-}
-button{
-border:none;border-radius:6px;cursor:pointer;color:#fff
-}
+.card{background:var(--card);padding:15px;border-radius:10px;margin-bottom:15px}
+input,select,button{width:100%;padding:10px;margin:5px 0}
+button{border:none;border-radius:6px;color:#fff;cursor:pointer}
 .main{background:var(--main)}
 .success{background:var(--success)}
 .warning{background:var(--warning)}
 .danger{background:var(--danger)}
-
-.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
-.filters button,.stats div{flex:1}
-.stats div{
-background:#eef3fa;padding:10px;border-radius:8px;
-text-align:center;font-weight:bold
-}
-
-table{width:100%;border-collapse:collapse;min-width:1200px}
-th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ddd;padding:6px;text-align:center}
 th{background:var(--main);color:#fff}
-
 .row-ok{background:#e8f5e9}
 .row-warn{background:#fff3e0}
 .row-expired{background:#fdecea}
 .row-unpaid{background:var(--unpaid)}
-
-.days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
-.days-ok{background:#c8e6c9;color:var(--success)}
-.days-warn{background:#ffe0b2;color:var(--warning)}
-.days-expired{background:#ffcdd2;color:var(--danger)}
-
-.actions button{padding:5px 8px;margin:2px;font-size:13px}
-.logout{background:var(--danger);width:auto;padding:6px 12px}
-.alert-btn{background:var(--warning);margin-bottom:10px}
+.days-ok{background:#c8e6c9;padding:4px 8px;border-radius:12px}
+.days-warn{background:#ffe0b2;padding:4px 8px;border-radius:12px}
+.days-expired{background:#ffcdd2;padding:4px 8px;border-radius:12px}
 </style>
 </head>
 
 <body>
 
 <!-- LOGIN -->
-<div id="loginBox" class="card" style="max-width:380px;margin:120px auto;text-align:center">
+<div id="loginBox" class="card" style="max-width:350px;margin:100px auto;text-align:center">
 <h2>🔐 تسجيل الدخول</h2>
-<input id="loginEmail" type="email" placeholder="E-mail">
+<input id="loginEmail" type="email" placeholder="Email">
 <input id="loginPass" type="password" placeholder="Mot de passe">
 <button class="main" onclick="login()">دخول</button>
 </div>
@@ -78,54 +49,32 @@ th{background:var(--main);color:#fff}
 <!-- APP -->
 <div id="app" style="display:none">
 
-<div style="display:flex;justify-content:space-between;align-items:center">
 <h2>إدارة الاشتراكات</h2>
-<button class="logout" onclick="logout()">Logout</button>
-</div>
-
-<input id="search"
-placeholder="بحث بالاسم / الهاتف / Email / Profil"
-onkeyup="onSearch(this.value)">
-
-<div class="filters">
-<button class="main" onclick="setFilter('all')">الكل</button>
-<button class="success" onclick="setFilter('active')">نشط</button>
-<button class="danger" onclick="setFilter('expired')">منتهي</button>
-<button class="warning" onclick="setFilter('unpaid')">غير مدفوع</button>
-</div>
-
-<div class="card stats">
-<div>📦 الكل<br><span id="stTotal">0</span></div>
-<div style="color:var(--success)">🟢 نشط<br><span id="stActive">0</span></div>
-<div style="color:var(--danger)">🔴 منتهي<br><span id="stExpired">0</span></div>
-<div style="color:var(--warning)">❌ غير مدفوع<br><span id="stUnpaid">0</span></div>
-</div>
-
-<button class="alert-btn" onclick="sendAlerts()">🔔 إرسال التنبيهات</button>
+<button class="danger" onclick="logout()">Logout</button>
 
 <div class="card">
 <input id="name" placeholder="اسم الزبون">
-<input id="phone" placeholder="الهاتف (مثال: 213xxxxxxxxx)">
-<input id="email" placeholder="Email">
-<input id="profile" placeholder="Profil">
+<input id="phone" placeholder="الهاتف">
 <select id="product">
 <option value="">الخدمة</option>
 <option>Netflix</option>
-<option>Shahid</option>
 <option>IPTV</option>
+<option>Shahid</option>
 </select>
-<input id="price" type="number" placeholder="السعر">
 <input id="days" type="number" placeholder="عدد الأيام">
-<button class="main" onclick="addSub()">➕ إضافة اشتراك</button>
+<button class="main" onclick="addSub()">➕ إضافة</button>
 </div>
 
 <div class="card">
 <table>
 <thead>
 <tr>
-<th>الاسم</th><th>الهاتف</th><th>Email</th><th>Profil</th>
-<th>الخدمة</th><th>السعر</th><th>الانتهاء</th>
-<th>⏳ الأيام</th><th>مدفوع</th><th>إجراءات</th>
+<th>الاسم</th>
+<th>الهاتف</th>
+<th>الخدمة</th>
+<th>الانتهاء</th>
+<th>الأيام</th>
+<th>WhatsApp</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -136,266 +85,106 @@ onkeyup="onSearch(this.value)">
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc }
-from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-import {
-getAuth, signInWithEmailAndPassword, signOut,
-onAuthStateChanged, setPersistence, browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
-authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
-projectId: "systeme-des-abonnements-6a98c"
+ apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
+ authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
+ projectId: "systeme-des-abonnements-6a98c"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-setPersistence(auth, browserLocalPersistence);
+const appFirebase = initializeApp(firebaseConfig);
+const db = getFirestore(appFirebase);
+const auth = getAuth(appFirebase);
 
 const $ = id => document.getElementById(id);
-let subs=[], currentFilter="all", searchText="";
+let subs = [];
 
-/* AUTH */
+/* LOGIN */
 async function login(){
-await signInWithEmailAndPassword(auth,$("loginEmail").value,$("loginPass").value);
+ try{
+  await signInWithEmailAndPassword(auth,$("loginEmail").value,$("loginPass").value);
+ }catch(e){
+  alert("❌ خطأ في الدخول");
+ }
 }
 async function logout(){ await signOut(auth); }
 
 onAuthStateChanged(auth,user=>{
-$("loginBox").style.display=user?"none":"block";
-$("app").style.display=user?"block":"none";
-if(user) loadSubs();
+ $("loginBox").style.display = user?"none":"block";
+ $("app").style.display = user?"block":"none";
+ if(user) loadSubs();
 });
 
-/* LOAD */
-async function loadSubs(){
-subs=[];
-const snap=await getDocs(collection(db,"subs"));
-snap.forEach(d=>subs.push({id:d.id,...d.data()}));
-render();
-}
-
-/* SEARCH */
-function onSearch(val){
-searchText = val.toLowerCase();
-render();
-}
-
-/* ✅ FIXED DAYS CALC */
+/* DAYS CALC — ثابت 100% */
 function calcDays(endISO){
  const now = new Date();
-
- // اليوم (بداية اليوم)
- const today = new Date(
-  now.getFullYear(),
-  now.getMonth(),
-  now.getDate()
- );
-
- // تاريخ الانتهاء (بداية اليوم)
+ const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
  const end = new Date(endISO);
- const endDay = new Date(
-  end.getFullYear(),
-  end.getMonth(),
-  end.getDate()
- );
-
+ const endDay = new Date(end.getFullYear(), end.getMonth(), end.getDate());
  return Math.round((endDay - today) / 86400000);
 }
 
-function fmt(d){
-return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
+/* LOAD */
+async function loadSubs(){
+ subs=[];
+ const snap = await getDocs(collection(db,"subs"));
+ snap.forEach(d=>subs.push(d.data()));
+ render();
 }
 
-/* WhatsApp */
-function sendWhatsApp(phone, name, product, end, days){
- if(!phone) return;
-
- // تنظيف رقم الهاتف
- phone = phone.replace(/\s|\+/g, "");
-
- product = product || "الخدمة";
- name = name || "زبوننا الكريم";
-
- let msg = "";
-
- // 🔴 اشتراك منتهي
- if(days < 0){
-  msg = `مرحباً ${name} 👋
-
-⚠️ قد انتهى اشتراكك في خدمة ${product}
-📅 بتاريخ: ${end}
-
-يرجى التواصل معنا لتجديد الاشتراك 🔄
-نحن في خدمتكم دائماً 🌟
-
-— Yazid STORE`;
- }
-
- // 🟠 ينتهي اليوم
- else if(days === 0){
-  msg = `مرحباً ${name} 👋
-
-⏰ اشتراكك في خدمة ${product}
-📅 ينتهي اليوم: ${end}
-
-يرجى التواصل معنا لتجديد الاشتراك 🔄
-نحن في خدمتكم دائماً 🌟
-
-— Yazid STORE`;
- }
-
- // 🟢 اشتراك مازال نشط
- else{
-  msg = `مرحباً ${name} 👋
-
-اشتراكك في خدمة ${product}
-📅 سينتهي بتاريخ: ${end}
-⏳ الأيام المتبقية: ${days} يوم${days > 1 ? "اً" : ""}
-
-يرجى الرد على هذه الرسالة للاستفسار أو التجديد.
-نحن في خدمتكم دائماً 🌟
-
-— Yazid STORE`;
- }
-
- window.open(
-  "https://wa.me/" + phone + "?text=" + encodeURIComponent(msg),
-  "_blank"
- );
-}
-window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
-}
-
-/* CRUD */
+/* ADD */
 async function addSub(){
-let d=parseInt($("days").value,10);
-if(!d||!$("name").value||!$("phone").value||!$("product").value)return;
+ let d = parseInt($("days").value,10);
+ if(!d || !$("name").value || !$("phone").value || !$("product").value) return;
 
-let end=new Date();
-end.setHours(23,59,59,999);
-end.setDate(end.getDate()+d);
+ let end = new Date();
+ end.setHours(0,0,0,0);
+ end.setDate(end.getDate() + d);
 
-await addDoc(collection(db,"subs"),{
-name:$("name").value,
-phone:$("phone").value,
-email:$("email").value,
-profile:$("profile").value,
-product:$("product").value,
-price:$("price").value,
-end:end.toISOString(),
-paid:false,
-alert3Sent:false,
-alertExpiredSent:false
-});
-await loadSubs();
-["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
+ await addDoc(collection(db,"subs"),{
+  name:$("name").value,
+  phone:$("phone").value,
+  product:$("product").value,
+  end:end.toISOString()
+ });
+ loadSubs();
+ $("name").value=$("phone").value=$("days").value="";
+ $("product").value="";
 }
 
-async function editSub(id){
-let s=subs.find(x=>x.id===id);
-await updateDoc(doc(db,"subs",id),{
-name:prompt("الاسم",s.name)||s.name,
-phone:prompt("الهاتف",s.phone)||s.phone,
-email:prompt("Email",s.email)||s.email,
-profile:prompt("Profil",s.profile)||s.profile,
-product:prompt("الخدمة",s.product)||s.product,
-price:prompt("السعر",s.price)||s.price
-});
-await loadSubs();
+/* WHATSAPP */
+function sendWhatsApp(phone,name,product,end,days){
+ phone=phone.replace(/\s|\+/g,"");
+ let msg=`مرحباً ${name} 👋
+اشتراك ${product}
+📅 ينتهي: ${end}
+⏳ المتبقي: ${days} يوم
+— Yazid STORE`;
+ window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
-async function renewSub(id){
-let s=subs.find(x=>x.id===id);
-let d=parseInt(prompt("عدد أيام التجديد"),10);
-if(!d)return;
-
-let end=new Date(s.end);
-end.setDate(end.getDate()+d);
-end.setHours(23,59,59,999);
-
-await updateDoc(doc(db,"subs",id),{
-end:end.toISOString(),
-alert3Sent:false,
-alertExpiredSent:false
-});
-await loadSubs();
-}
-
-async function deleteSub(id){
-if(confirm("حذف الاشتراك؟")){
-await deleteDoc(doc(db,"subs",id));
-await loadSubs();
-}
-}
-
-async function togglePaid(id,val){
-await updateDoc(doc(db,"subs",id),{paid:val});
-await loadSubs();
-}
-
-/* ALERTS */
-async function sendAlerts(){
-for(let s of subs){
-let diff=calcDays(s.end);
-if(diff===3 && !s.alert3Sent){
-sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
-await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
-}
-if(diff<0 && !s.alertExpiredSent){
-sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
-await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
-}
-}
-}
-
-/* FILTER + RENDER */
-function setFilter(f){currentFilter=f;render();}
-
+/* RENDER */
 function render(){
-$("list").innerHTML="";
-let t=0,a=0,e=0,u=0;
-
-subs.forEach(s=>{
-let diff=calcDays(s.end);
-t++; diff<0?e++:a++; if(!s.paid)u++;
-
-if(currentFilter==="active"&&diff<0)return;
-if(currentFilter==="expired"&&diff>=0)return;
-if(currentFilter==="unpaid"&&s.paid)return;
-if(searchText && !(`${s.name}${s.phone}${s.email}${s.profile}`.toLowerCase().includes(searchText)))return;
-
-let tr=document.createElement("tr");
-tr.className=!s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
-
-tr.innerHTML=`
-<td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
-<td>${fmt(new Date(s.end))}</td>
-<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
-<td class="actions">
-<button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(new Date(s.end))}',${diff})">💬</button>
-<button class="main" onclick="editSub('${s.id}')">✏️</button>
-<button class="warning" onclick="renewSub('${s.id}')">🔄</button>
-<button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
-</td>`;
-$("list").appendChild(tr);
-});
-
-$("stTotal").textContent=t;
-$("stActive").textContent=a;
-$("stExpired").textContent=e;
-$("stUnpaid").textContent=u;
+ $("list").innerHTML="";
+ subs.forEach(s=>{
+  let diff=calcDays(s.end);
+  let cls = diff<0?"days-expired":diff<=3?"days-warn":"days-ok";
+  let tr=document.createElement("tr");
+  tr.innerHTML=`
+  <td>${s.name}</td>
+  <td>${s.phone}</td>
+  <td>${s.product}</td>
+  <td>${new Date(s.end).toLocaleDateString()}</td>
+  <td><span class="${cls}">${diff}</span></td>
+  <td><button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${new Date(s.end).toLocaleDateString()}',${diff})">💬</button></td>
+  `;
+  $("list").appendChild(tr);
+ });
 }
 
-Object.assign(window,{
-login,logout,addSub,editSub,renewSub,
-deleteSub,togglePaid,setFilter,onSearch,
-sendWhatsApp,sendAlerts
-});
+Object.assign(window,{login,logout,addSub,sendWhatsApp});
 </script>
 
 </body>
