@@ -186,11 +186,13 @@ function onSearch(val){
 
 /* DATE */
 function calcDays(endISO){
- let end=new Date(endISO); end.setHours(0,0,0,0);
- let today=new Date(); today.setHours(0,0,0,0);
- let diff=Math.ceil((end-today)/86400000);
- if(end<today) diff=-1;
- return diff;
+  const today = new Date();
+  today.setHours(0,0,0,0);   // تثبيت اليوم
+
+  const end = new Date(endISO);
+  end.setHours(0,0,0,0);     // تثبيت الانتهاء
+
+  return Math.round((end - today) / 86400000);
 }
 function fmt(d){
  return d.getFullYear()+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+String(d.getDate()).padStart(2,"0");
