@@ -1,192 +1,154 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMW Subscription Manager</title>
+phone = phone.replace(/\s|\+/g,"");
+ name = name || "زبوننا الكريم";
+ product = product || "الخدمة";
 
-<style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:Arial, sans-serif;
+ let msg = "";
+
+ // 🔴 نسخة منتهية الاشتراك
+ if(days < 0){
+  msg = مرحباً ${name} 👋
+
+نود إعلامكم أن اشتراككم في خدمة ${product}
+قد انتهى بتاريخ ${end} ⛔
+
+📌 في حال الرغبة في التجديد
+يرجى الرد على هذه الرسالة.
+
+نحن في خدمتكم دائماً 🌟;
+ }
+
+ // 🟢 نسخة اشتراك نشط
+ else{
+  msg = مرحباً ${name} 👋
+
+نود إعلامكم أن اشتراككم في خدمة ${product}
+سينتهي بتاريخ ${end} ⏰
+
+⏳ عدد الأيام المتبقية: ${days} أيام
+
+📌 في حال الرغبة في التجديد أو الاستفسار
+يرجى الرد على هذه الرسالة.
+
+نحن في خدمتكم دائماً 🌟;
+ }
+
+ window.open(
+  "https://wa.me/" + phone + "?text=" + encodeURIComponent(msg),
+  "_blank"
+ );
 }
 
-/* خلفية BMW */
-body{
-  height:100vh;
-  background:url("https://images.unsplash.com/photo-1549924231-f129b911e442") no-repeat center center/cover;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
+/* CRUD */
+async function addSub(){
+let days=parseInt($("days").value,10);
+if(!days!$("name").value!$("phone").value||!$("product").value)return;
 
-/* طبقة تغميق */
-body::before{
-  content:"";
-  position:absolute;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.7);
-  z-index:0;
-}
+let end=new Date(); end.setHours(0,0,0,0); end.setDate(end.getDate()+days);
 
-/* Login Glass */
-.login-box{
-  position:relative;
-  z-index:1;
-  width:350px;
-  padding:40px;
-  border-radius:20px;
-  backdrop-filter:blur(20px);
-  background:rgba(255,255,255,0.1);
-  border:1px solid rgba(255,255,255,0.3);
-  text-align:center;
-  color:#fff;
-}
-
-.login-box h2{
-  margin-bottom:25px;
-  color:#1e88e5;
-}
-
-.login-box input{
-  width:100%;
-  padding:12px;
-  margin:10px 0;
-  border:none;
-  border-radius:30px;
-  background:rgba(255,255,255,0.2);
-  color:#fff;
-}
-
-.login-box button{
-  width:100%;
-  padding:12px;
-  border:none;
-  border-radius:30px;
-  background:#1e88e5;
-  color:#fff;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-.login-box button:hover{
-  background:#1565c0;
-}
-
-#app{
-  display:none;
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:#f4f6f9;
-  padding:20px;
-  overflow:auto;
-}
-
-.card{
-  background:#fff;
-  padding:15px;
-  border-radius:10px;
-  margin-bottom:15px;
-  box-shadow:0 2px 6px rgba(0,0,0,.05);
-}
-
-button.main{background:#1976d2;color:#fff}
-button.danger{background:#c62828;color:#fff}
-
-</style>
-</head>
-<body>
-
-<!-- LOGIN -->
-<div class="login-box" id="loginBox">
-  <h2>BMW LOGIN</h2>
-  <input type="email" id="loginEmail" placeholder="E-mail">
-  <input type="password" id="loginPass" placeholder="Password">
-  <button onclick="login()">Login</button>
-</div>
-
-<!-- APP -->
-<div id="app">
-  <div style="display:flex;justify-content:space-between">
-    <h2>إدارة الاشتراكات</h2>
-    <button class="danger" onclick="logout()">Logout</button>
-  </div>
-
-  <div class="card">
-    <input id="name" placeholder="اسم الزبون">
-    <input id="phone" placeholder="الهاتف">
-    <button class="main" onclick="addSub()">إضافة</button>
-  </div>
-
-  <div class="card">
-    <ul id="list"></ul>
-  </div>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs }
-from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
-import {
-getAuth, signInWithEmailAndPassword, signOut,
-onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
-
-/* Firebase Config */
-const firebaseConfig = {
-apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
-authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
-projectId: "systeme-des-abonnements-6a98c"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-const $ = id => document.getElementById(id);
-
-/* LOGIN */
-window.login = async function(){
-  try{
-    await signInWithEmailAndPassword(
-      auth,
-      $("loginEmail").value.trim(),
-      $("loginPass").value.trim()
-    );
-  }catch(e){
-    alert(e.message);
-  }
-};
-
-window.logout = async function(){
-  await signOut(auth);
-};
-
-/* AUTH STATE */
-onAuthStateChanged(auth,user=>{
-  if(user){
-    $("loginBox").style.display="none";
-    $("app").style.display="block";
-    loadSubs();
-  }else{
-    $("loginBox").style.display="block";
-    $("app").style.display="none";
-  }
+await addDoc(collection(db,"subs"),{
+name:$("name").value,
+phone:$("phone").value,
+email:$("email").value,
+profile:$("profile").value,
+product:$("product").value,
+price:$("price").value,
+end:end.toISOString(),
+paid:false,
+alert3Sent:false,
+alertExpiredSent:false
 });
-
-/* LOAD DATA */
-async function loadSubs(){
-  $("list").innerHTML="";
-  const snap = await getDocs(collection(db,"subs"));
-  snap.forEach(doc=>{
-    const li = document.createElement("li");
-    li.textContent = doc.data().name + " - " + doc.data().phone;
-    $("list").appendChild(li);
-  });
+await loadSubs();
+["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
 }
+
+async function editSub(id){
+let s=subs.find(x=>x.id===id);
+await updateDoc(doc(db,"subs",id),{
+name:prompt("الاسم",s.name)||s.name,
+phone:prompt("الهاتف",s.phone)||s.phone,
+email:prompt("Email",s.email)||s.email,
+profile:prompt("Profil",s.profile)||s.profile,
+product:prompt("الخدمة",s.product)||s.product,
+price:prompt("السعر",s.price)||s.price
+});
+await loadSubs();
+}
+
+async function renewSub(id){
+let s=subs.find(x=>x.id===id);
+let d=parseInt(prompt("عدد أيام التجديد"),10);
+if(!d)return;
+let end=new Date(s.end); end.setDate(end.getDate()+d);
+await updateDoc(doc(db,"subs",id),{
+end:end.toISOString(),
+alert3Sent:false,
+alertExpiredSent:false
+});
+await loadSubs();
+}
+
+async function deleteSub(id){
+if(confirm("حذف الاشتراك؟")){
+await deleteDoc(doc(db,"subs",id));
+await loadSubs();
+}
+}
+
+async function togglePaid(id,val){
+await updateDoc(doc(db,"subs",id),{paid:val});
+await loadSubs();
+}
+
+/* ALERTS */
+async function sendAlerts(){
+for(let s of subs){
+let diff=calcDays(s.end);
+if(diff===3 && !s.alert3Sent){
+sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
+await updateDoc(doc(db,"subs",s.id),{alert3Sent:true});
+break;
+}
+if(diff<0 && !s.alertExpiredSent){
+sendWhatsApp(s.phone,s.name,s.product,fmt(new Date(s.end)),diff);
+await updateDoc(doc(db,"subs",s.id),{alertExpiredSent:true});
+break;
+}
+}
+}
+
+/* FILTER + RENDER */
+function setFilter(f){currentFilter=f;render();}
+
+function render(){
+$("list").innerHTML="";
+let t=0,a=0,e=0,u=0;
+
+subs.forEach(s=>{
+let diff=calcDays(s.end);
+t++; diff<0?e++:a++; if(!s.paid)u++;
+
+if(currentFilter==="active"&&diff<0)return;
+if(currentFilter==="expired"&&diff>=0)return;
+if(currentFilter==="unpaid"&&s.paid)return;
+if(searchText && !(${s.name}${s.phone}${s.email}${s.profile}.toLowerCase().includes(searchText)))return;
+
+let tr=document.createElement("tr");
+if(!s.paid) tr.className="row-unpaid";
+else if(diff<0) tr.className="row-expired";
+else if(diff<=3) tr.className="row-warn";
+else tr.className="row-ok";
+
+tr.innerHTML=
+<td>${s.name}</td><td>${s.phone}</td><td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td><td>${s.product}</td><td>${s.price||"-"}</td>
+<td>${fmt(new Date(s.end))}</td>
+<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
+<td class="actions">
+<button class="success" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${fmt(new Date(s.end))}',${diff})">💬</button>
+<button class="main" onclick="editSub('${s.id}')">✏️</button>
+<button class="warning" onclick="renewSub('${s.id}')">🔄</button>
+<button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
+</td>;
+$("list").appendChild(tr);
+});
