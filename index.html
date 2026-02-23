@@ -3,199 +3,190 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BMW Premium Login</title>
+<title>BMW Subscription Manager</title>
 
 <style>
 *{
   margin:0;
   padding:0;
   box-sizing:border-box;
-  font-family:"Segoe UI",Tahoma,sans-serif;
+  font-family:Arial, sans-serif;
 }
 
+/* خلفية BMW */
 body{
   height:100vh;
+  background:url("https://images.unsplash.com/photo-1549924231-f129b911e442") no-repeat center center/cover;
   display:flex;
   justify-content:center;
   align-items:center;
-  background:url("https://images.unsplash.com/photo-1549924231-f129b911e442") no-repeat center center/cover;
-  overflow:hidden;
 }
 
-/* Dark overlay */
+/* طبقة تغميق */
 body::before{
   content:"";
   position:absolute;
   width:100%;
   height:100%;
-  background:linear-gradient(135deg, rgba(0,0,0,.8), rgba(0,0,0,.4));
+  background:rgba(0,0,0,0.7);
   z-index:0;
 }
 
-/* Glass Card */
-.login-container{
+/* Login Glass */
+.login-box{
   position:relative;
   z-index:1;
-  width:370px;
-  padding:45px 35px;
-  border-radius:25px;
-  backdrop-filter:blur(25px);
-  background:rgba(255,255,255,0.08);
-  border:1px solid rgba(255,255,255,0.25);
-  box-shadow:0 15px 40px rgba(0,0,0,.6);
+  width:350px;
+  padding:40px;
+  border-radius:20px;
+  backdrop-filter:blur(20px);
+  background:rgba(255,255,255,0.1);
+  border:1px solid rgba(255,255,255,0.3);
   text-align:center;
   color:#fff;
-  animation:fadeIn 1.2s ease;
 }
 
-@keyframes fadeIn{
-  from{opacity:0; transform:translateY(40px);}
-  to{opacity:1; transform:translateY(0);}
-}
-
-.login-container h2{
-  margin-bottom:30px;
-  letter-spacing:2px;
-  font-weight:600;
+.login-box h2{
+  margin-bottom:25px;
   color:#1e88e5;
 }
 
-/* Input */
-.input-box{
-  position:relative;
-  margin-bottom:22px;
-}
-
-.input-box input{
+.login-box input{
   width:100%;
-  padding:12px 45px 12px 15px;
+  padding:12px;
+  margin:10px 0;
   border:none;
-  outline:none;
   border-radius:30px;
-  background:rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.2);
   color:#fff;
-  font-size:14px;
-  transition:.3s;
 }
 
-.input-box input:focus{
-  background:rgba(255,255,255,0.25);
-  box-shadow:0 0 10px #1e88e5;
-}
-
-.input-box span{
-  position:absolute;
-  top:50%;
-  left:15px;
-  transform:translateY(-50%);
-  cursor:pointer;
-  font-size:14px;
-}
-
-/* Options */
-.options{
-  display:flex;
-  justify-content:space-between;
-  font-size:12px;
-  margin-bottom:20px;
-}
-
-.options a{
-  color:#ccc;
-  text-decoration:none;
-}
-
-.options a:hover{
-  color:#fff;
-  text-decoration:underline;
-}
-
-/* Button */
-.login-btn{
+.login-box button{
   width:100%;
   padding:12px;
   border:none;
   border-radius:30px;
-  background:linear-gradient(90deg,#1e88e5,#1565c0);
+  background:#1e88e5;
   color:#fff;
-  font-weight:bold;
   cursor:pointer;
-  transition:.3s;
+  font-weight:bold;
 }
 
-.login-btn:hover{
-  transform:scale(1.05);
-  box-shadow:0 0 20px #1e88e5;
+.login-box button:hover{
+  background:#1565c0;
 }
 
-.footer{
-  margin-top:20px;
-  font-size:12px;
-  color:#bbb;
-}
-
-/* Error */
-.error{
-  font-size:12px;
-  color:#ff5252;
-  margin-bottom:10px;
+#app{
   display:none;
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#f4f6f9;
+  padding:20px;
+  overflow:auto;
 }
+
+.card{
+  background:#fff;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:15px;
+  box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+
+button.main{background:#1976d2;color:#fff}
+button.danger{background:#c62828;color:#fff}
 
 </style>
 </head>
-
 <body>
 
-<div class="login-container">
+<!-- LOGIN -->
+<div class="login-box" id="loginBox">
   <h2>BMW LOGIN</h2>
+  <input type="email" id="loginEmail" placeholder="E-mail">
+  <input type="password" id="loginPass" placeholder="Password">
+  <button onclick="login()">Login</button>
+</div>
 
-  <div class="error" id="errorMsg">يرجى إدخال جميع البيانات</div>
-
-  <div class="input-box">
-    <input type="text" id="username" placeholder="Username">
-    <span>👤</span>
+<!-- APP -->
+<div id="app">
+  <div style="display:flex;justify-content:space-between">
+    <h2>إدارة الاشتراكات</h2>
+    <button class="danger" onclick="logout()">Logout</button>
   </div>
 
-  <div class="input-box">
-    <input type="password" id="password" placeholder="Password">
-    <span onclick="togglePassword()">👁</span>
+  <div class="card">
+    <input id="name" placeholder="اسم الزبون">
+    <input id="phone" placeholder="الهاتف">
+    <button class="main" onclick="addSub()">إضافة</button>
   </div>
 
-  <div class="options">
-    <label><input type="checkbox"> تذكرني</label>
-    <a href="#">نسيت كلمة المرور؟</a>
-  </div>
-
-  <button class="login-btn" onclick="login()">Login</button>
-
-  <div class="footer">
-    Powered by BMW Style 🚗
+  <div class="card">
+    <ul id="list"></ul>
   </div>
 </div>
 
-<script>
-function togglePassword(){
-  const pass = document.getElementById("password");
-  pass.type = pass.type === "password" ? "text" : "password";
-}
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs }
+from "https://www.gstatic.com/firebasejs/12.8.0/firebase-firestore.js";
+import {
+getAuth, signInWithEmailAndPassword, signOut,
+onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.8.0/firebase-auth.js";
 
-function login(){
-  const user = document.getElementById("username").value;
-  const pass = document.getElementById("password").value;
-  const error = document.getElementById("errorMsg");
+/* Firebase Config */
+const firebaseConfig = {
+apiKey: "AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
+authDomain: "systeme-des-abonnements-6a98c.firebaseapp.com",
+projectId: "systeme-des-abonnements-6a98c"
+};
 
-  if(!user || !pass){
-    error.style.display="block";
-    return;
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+const $ = id => document.getElementById(id);
+
+/* LOGIN */
+window.login = async function(){
+  try{
+    await signInWithEmailAndPassword(
+      auth,
+      $("loginEmail").value.trim(),
+      $("loginPass").value.trim()
+    );
+  }catch(e){
+    alert(e.message);
   }
+};
 
-  error.style.display="none";
+window.logout = async function(){
+  await signOut(auth);
+};
 
-  // هنا تقدر تربط Firebase
-  alert("Login Successful 🚀");
+/* AUTH STATE */
+onAuthStateChanged(auth,user=>{
+  if(user){
+    $("loginBox").style.display="none";
+    $("app").style.display="block";
+    loadSubs();
+  }else{
+    $("loginBox").style.display="block";
+    $("app").style.display="none";
+  }
+});
+
+/* LOAD DATA */
+async function loadSubs(){
+  $("list").innerHTML="";
+  const snap = await getDocs(collection(db,"subs"));
+  snap.forEach(doc=>{
+    const li = document.createElement("li");
+    li.textContent = doc.data().name + " - " + doc.data().phone;
+    $("list").appendChild(li);
+  });
 }
-</script>
-
-</body>
-</html>
