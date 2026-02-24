@@ -54,7 +54,7 @@ th{background:var(--main);color:#fff}
 <div id="app" style="display:none">
 
 <div style="display:flex;justify-content:space-between;align-items:center">
-<h2>إدارة الاشتراكات PRO</h2>
+<h2>إدارة الاشتراكات</h2>
 <button class="logout" onclick="logout()">Logout</button>
 </div>
 
@@ -115,7 +115,10 @@ th{background:var(--main);color:#fff}
 const firebaseConfig={
 apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
 authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
-projectId:"systeme-des-abonnements-6a98c"
+projectId:"systeme-des-abonnements-6a98c",
+storageBucket:"systeme-des-abonnements-6a98c.firebasestorage.app",
+messagingSenderId:"74948745712",
+appId:"1:74948745712:web:ea9140bdf7dafb85baa535"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -216,10 +219,8 @@ msg=`مرحباً 👋
 🎖️Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
-نود إعلامكم أن اشتراككم في خدمة ${product}
-قد انتهى بتاريخ ${endDate} ⛔
-
-يرجى الرد للتجديد 🌟`;
+اشتراك ${product}
+انتهى بتاريخ ${endDate} ⛔`;
 }else{
 msg=`مرحباً 👋
 🎖️Yazid STORE 🎖️
@@ -227,7 +228,6 @@ Numéro WhatsApp : 0541 23 35 75
 
 اشتراك ${product}
 سينتهي بتاريخ ${endDate} ⏰
-
 متبقي ${days} أيام.`;
 }
 window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
