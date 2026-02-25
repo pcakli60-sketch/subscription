@@ -2,116 +2,65 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>إدارة الاشتراكات PRO</title>
+<title>إدارة الاشتراكات</title>
 
 <style>
-:root{
---main:#1976d2;
---success:#2e7d32;
---warning:#ef6c00;
---danger:#c62828;
---bg:#f4f6f9;
---card:#ffffff;
---unpaid:#fdecea;
-}
-body{font-family:Arial;background:var(--bg);margin:0;padding:15px}
-h2{text-align:center;color:var(--main)}
-.card{background:var(--card);padding:15px;border-radius:12px;margin-bottom:15px;box-shadow:0 3px 8px rgba(0,0,0,.08)}
-input,select,button{width:100%;padding:10px;margin:5px 0;font-size:14px}
-button{border:none;border-radius:8px;cursor:pointer;color:#fff}
-.main{background:var(--main)}
-.success{background:var(--success)}
-.warning{background:var(--warning)}
-.danger{background:var(--danger)}
-.logout{background:var(--danger);width:auto;padding:6px 12px}
-.filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
-.filters button,.stats div{flex:1}
-.stats div{background:#eef3fa;padding:10px;border-radius:10px;text-align:center;font-weight:bold}
+body{font-family:Arial;background:#f4f6f9;margin:0;padding:15px}
+.card{background:#fff;padding:15px;border-radius:10px;margin-bottom:15px}
+button{padding:8px;border:none;border-radius:6px;cursor:pointer}
+.main{background:#1976d2;color:#fff}
+.success{background:#2e7d32;color:#fff}
+.warning{background:#ef6c00;color:#fff}
+.danger{background:#c62828;color:#fff}
 table{width:100%;border-collapse:collapse}
-th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
-th{background:var(--main);color:#fff}
-.row-ok{background:#e8f5e9}
-.row-warn{background:#fff3e0}
+th,td{border:1px solid #ddd;padding:6px;text-align:center}
+th{background:#1976d2;color:#fff}
 .row-expired{background:#fdecea}
-.row-unpaid{background:var(--unpaid)}
-.days-box{padding:4px 8px;border-radius:12px;font-weight:bold}
-.days-ok{background:#c8e6c9;color:var(--success)}
-.days-warn{background:#ffe0b2;color:var(--warning)}
-.days-expired{background:#ffcdd2;color:var(--danger)}
-.actions button{padding:5px 8px;margin:2px;font-size:13px}
-.toast{
-position:fixed;
-top:20px;
-left:50%;
-transform:translateX(-50%);
-background:#2e7d32;
-color:white;
-padding:10px 20px;
-border-radius:8px;
-display:none;
-}
+.row-warn{background:#fff3e0}
+.row-ok{background:#e8f5e9}
+.row-unpaid{background:#fdecea}
 </style>
 </head>
 
 <body>
 
-<div class="toast" id="toast"></div>
-
-<div id="loginBox" class="card" style="max-width:380px;margin:120px auto;text-align:center">
-<h2>🔐 تسجيل الدخول</h2>
-<input id="loginEmail" type="email" placeholder="E-mail">
-<input id="loginPass" type="password" placeholder="Mot de passe">
+<div id="loginBox" class="card" style="max-width:350px;margin:100px auto;text-align:center">
+<h3>تسجيل الدخول</h3>
+<input id="loginEmail" type="email" placeholder="Email"><br><br>
+<input id="loginPass" type="password" placeholder="Password"><br><br>
 <button class="main" onclick="login()">دخول</button>
 </div>
 
 <div id="app" style="display:none">
 
-<div style="display:flex;justify-content:space-between;align-items:center">
-<h2>إدارة الاشتراكات</h2>
-<button class="logout" onclick="logout()">Logout</button>
-</div>
-
-<input id="search" placeholder="بحث شامل..." onkeyup="onSearch(this.value)">
-
-<div class="filters">
-<button class="main" onclick="setFilter('all')">الكل</button>
-<button class="success" onclick="setFilter('active')">نشط</button>
-<button class="danger" onclick="setFilter('expired')">منتهي</button>
-<button class="warning" onclick="setFilter('unpaid')">غير مدفوع</button>
-</div>
-
-<div class="card stats">
-<div>📦 الكل<br><span id="stTotal">0</span></div>
-<div style="color:var(--success)">🟢 نشط<br><span id="stActive">0</span></div>
-<div style="color:var(--danger)">🔴 منتهي<br><span id="stExpired">0</span></div>
-<div style="color:var(--warning)">❌ غير مدفوع<br><span id="stUnpaid">0</span></div>
-</div>
-
-<button class="warning" onclick="sendAlerts()">🔔 إرسال التنبيهات</button>
+<button class="danger" onclick="logout()">Logout</button>
 
 <div class="card">
-<input id="name" placeholder="اسم الزبون">
-<input id="phone" placeholder="الهاتف مثال 0556382694">
-<input id="email" placeholder="Email">
-<input id="profile" placeholder="Profil">
+<input id="name" placeholder="الاسم">
+<input id="phone" placeholder="الهاتف 0556382694">
 <select id="product">
 <option value="">الخدمة</option>
 <option>Netflix</option>
 <option>Shahid</option>
 <option>IPTV</option>
 </select>
-<input id="price" type="number" placeholder="السعر">
 <input id="days" type="number" placeholder="عدد الأيام">
-<button class="main" onclick="addSub()">➕ إضافة اشتراك</button>
+<button class="main" onclick="addSub()">إضافة</button>
 </div>
+
+<button class="warning" onclick="sendAlerts()">إرسال جماعي</button>
 
 <div class="card">
 <table>
 <thead>
 <tr>
-<th>الاسم</th><th>الهاتف</th><th>Email</th><th>Profil</th>
-<th>الخدمة</th><th>السعر</th><th>الانتهاء</th>
-<th>⏳ الأيام</th><th>مدفوع</th><th>إجراءات</th>
+<th>الاسم</th>
+<th>الهاتف</th>
+<th>الخدمة</th>
+<th>الانتهاء</th>
+<th>الأيام</th>
+<th>مدفوع</th>
+<th>إرسال</th>
 </tr>
 </thead>
 <tbody id="list"></tbody>
@@ -125,6 +74,7 @@ display:none;
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
+
 firebase.initializeApp({
 apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
 authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -133,28 +83,25 @@ projectId:"systeme-des-abonnements-6a98c"
 
 const db=firebase.firestore();
 const auth=firebase.auth();
+
 const $=id=>document.getElementById(id);
+let subs=[];
 
-let subs=[],currentFilter="all",searchText="";
-
-function showToast(msg){
-$("toast").textContent=msg;
-$("toast").style.display="block";
-setTimeout(()=>{$("toast").style.display="none";},2000);
+function login(){
+auth.signInWithEmailAndPassword(
+$("loginEmail").value,
+$("loginPass").value
+).catch(e=>alert(e.message));
 }
 
-function normalizePhone(phone){
-phone = phone.replace(/\D/g,"");
-if(phone.startsWith("0")){
-return "213"+phone.substring(1);
-}
-return phone;
+function logout(){
+auth.signOut();
 }
 
-auth.onAuthStateChanged(u=>{
-$("loginBox").style.display=u?"none":"block";
-$("app").style.display=u?"block":"none";
-if(u) loadSubs();
+auth.onAuthStateChanged(user=>{
+$("loginBox").style.display=user?"none":"block";
+$("app").style.display=user?"block":"none";
+if(user) loadSubs();
 });
 
 function loadSubs(){
@@ -177,10 +124,18 @@ end.setHours(0,0,0,0);
 return Math.round((end-today)/86400000);
 }
 
+function normalizePhone(phone){
+phone=phone.replace(/\D/g,"");
+if(phone.startsWith("0")){
+return "213"+phone.substring(1);
+}
+return phone;
+}
+
 async function addSub(){
-let days=parseInt($("days").value,10);
+let days=parseInt($("days").value);
 if(!days||!$("name").value||!$("phone").value||!$("product").value){
-showToast("املأ الحقول المطلوبة ⚠");
+alert("أدخل البيانات");
 return;
 }
 
@@ -191,84 +146,60 @@ let end=new Date(today.getTime()+days*86400000);
 await db.collection("subs").add({
 name:$("name").value,
 phone:$("phone").value,
-email:$("email").value,
-profile:$("profile").value,
 product:$("product").value,
-price:$("price").value,
 end:end.toISOString(),
 paid:false,
-alert3Sent:false,
-alertExpiredSent:false,
+alertSent:false,
 createdAt:firebase.firestore.FieldValue.serverTimestamp()
 });
 
-["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
-showToast("✅ تمت الإضافة بنجاح");
+$("name").value="";
+$("phone").value="";
+$("days").value="";
 }
 
-function sendWhatsApp(phone,name,product,endDate,days){
-let finalPhone = normalizePhone(phone);
-let msg = `مرحباً 👋
-🎖️Yazid STORE 🎖️
-
-اشتراك ${product}
-${days<0?"انتهى بتاريخ":"سينتهي بتاريخ"} ${endDate}
-${days>=0?"متبقي "+days+" أيام":""}`;
-
-window.open("https://wa.me/"+finalPhone+"?text="+encodeURIComponent(msg),"_blank");
+function sendWhatsApp(s){
+let diff=calcDays(s.end);
+let msg=`اشتراك ${s.product}
+${diff<0?"انتهى":"ينتهي"} بتاريخ ${new Date(s.end).toLocaleDateString()}`;
+window.open("https://wa.me/"+normalizePhone(s.phone)+"?text="+encodeURIComponent(msg));
 }
 
 async function sendAlerts(){
 let delay=0;
 for(let s of subs){
-let diff=calcDays(s.end);
-if((diff===3&&!s.alert3Sent)||(diff<0&&!s.alertExpiredSent)){
+if(!s.alertSent){
 setTimeout(()=>{
-sendWhatsApp(s.phone,s.name,s.product,new Date(s.end).toLocaleDateString(),diff);
+sendWhatsApp(s);
 },delay);
-delay+=800;
-await db.collection("subs").doc(s.id).update({
-alert3Sent:true,
-alertExpiredSent:true
-});
+delay+=700;
+await db.collection("subs").doc(s.id).update({alertSent:true});
 }
 }
-if(delay===0) showToast("لا توجد تنبيهات");
 }
 
 function render(){
 $("list").innerHTML="";
-let t=0,a=0,e=0,u=0;
-
 subs.forEach(s=>{
 let diff=calcDays(s.end);
-t++; diff<0?e++:a++; if(!s.paid)u++;
-
 let tr=document.createElement("tr");
 tr.className=!s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
 
 tr.innerHTML=`
 <td>${s.name}</td>
 <td>${s.phone}</td>
-<td>${s.email||"-"}</td>
-<td>${s.profile||"-"}</td>
 <td>${s.product}</td>
-<td>${s.price||"-"}</td>
 <td>${new Date(s.end).toLocaleDateString()}</td>
-<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff}</span></td>
-<td><input type="checkbox" ${s.paid?"checked":""} onclick="db.collection('subs').doc('${s.id}').update({paid:this.checked})"></td>
-<td class="actions">
-<button class="main" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${new Date(s.end).toLocaleDateString()}',${diff})">💬</button>
-</td>`;
+<td>${diff}</td>
+<td><input type="checkbox" ${s.paid?"checked":""}
+onclick="db.collection('subs').doc('${s.id}').update({paid:this.checked})"></td>
+<td><button class="main" onclick='sendWhatsApp(${JSON.stringify(s)})'>💬</button></td>
+`;
+
 $("list").appendChild(tr);
 });
-
-$("stTotal").textContent=t;
-$("stActive").textContent=a;
-$("stExpired").textContent=e;
-$("stUnpaid").textContent=u;
 }
-</script>
 
+</script>
 </body>
 </html>
