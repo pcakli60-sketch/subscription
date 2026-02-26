@@ -153,28 +153,13 @@ render();
 
 function calcDays(endTimestamp){
 if(!endTimestamp) return 0;
-
-// نحول Timestamp إلى تاريخ
-const endDate = new Date(endTimestamp.seconds * 1000);
-const now = new Date();
-
-// نحسب الأيام باستخدام UTC لتفادي فرق التوقيت
-const todayUTC = Date.UTC(
-  now.getUTCFullYear(),
-  now.getUTCMonth(),
-  now.getUTCDate()
-);
-
-const endUTC = Date.UTC(
-  endDate.getUTCFullYear(),
-  endDate.getUTCMonth(),
-  endDate.getUTCDate()
-);
-
-const diff = Math.floor((endUTC - todayUTC) / (1000 * 60 * 60 * 24));
-
-return diff;
+let endDate=new Date(endTimestamp.seconds*1000);
+let now=new Date();
+let today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+let end=new Date(endDate.getFullYear(),endDate.getMonth(),endDate.getDate());
+return Math.floor((end-today)/(1000*60*60*24));
 }
+
 function onSearch(v){searchText=v.toLowerCase();render();}
 function setFilter(f){currentFilter=f;render();}
 
