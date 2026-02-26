@@ -152,9 +152,23 @@ render();
 }
 
 function calcDays(endISO){
-const today=new Date();today.setHours(0,0,0,0);
-const end=new Date(endISO);end.setHours(0,0,0,0);
-return Math.round((end-today)/86400000);
+
+  const now = new Date();
+  const today = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  );
+
+  const endDateObj = new Date(endISO);
+  const end = new Date(
+    endDateObj.getFullYear(),
+    endDateObj.getMonth(),
+    endDateObj.getDate()
+  );
+
+  const diffTime = end.getTime() - today.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 }
 
 function onSearch(v){searchText=v.toLowerCase();render();}
@@ -166,8 +180,12 @@ if(!days||!$("name").value||!$("phone").value||!$("product").value){
 alert("املأ الحقول المطلوبة ⚠");
 return;
 }
-let end=new Date();end.setDate(end.getDate()+days);
-
+let end = new Date();
+end = new Date(
+  end.getFullYear(),
+  end.getMonth(),
+  end.getDate() + days
+);
 await db.collection("subs").add({
 name:$("name").value,
 phone:$("phone").value,
