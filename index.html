@@ -242,19 +242,60 @@ window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
 async function sendAlerts(){
+
+let alerts = [];
+
 for(let s of subs){
-let diff=calcDays(s.end);
-if(diff===3 && !s.alert3Sent){
-sendWhatsApp(s.phone,s.name,s.product,new Date(s.end).toLocaleDateString(),diff);
-await db.collection("subs").doc(s.id).update({alert3Sent:true});
+let diff = calcDays(s.end);
+
+if(diff === 3 && !s.alert3Sent){
+alerts.push({type:"before", sub:s});
 }
-if(diff<0 && !s.alertExpiredSent){
-sendWhatsApp(s.phone,s.name,s.product,new Date(s.end).toLocaleDateString(),diff);
-await db.collection("subs").doc(s.id).update({alertExpiredSent:true});
-}
+
+if(diff < 0 && !s.alertExpiredSent){
+alerts.push({type:"expired", sub:s});
 }
 }
 
+if(alerts.length === 0){
+alert("لا توجد تنبيهات حالياً ✅");
+return;
+}
+
+let index = 0;
+
+function openNext(){
+
+if(index >= alerts.length){
+alert("✅ تم فتح جميع المحادثات");
+return;
+}
+
+let item = alerts[index];
+let s = item.sub;
+let diff = calcDays(s.end);
+
+sendWhatsApp(
+s.phone,
+s.name,
+s.product,
+new Date(s.end).toLocaleDateString(),
+diff
+);
+
+if(item.type === "before"){
+db.collection("subs").doc(s.id).update({alert3Sent:true});
+}
+if(item.type === "expired"){
+db.collection("subs").doc(s.id).update({alertExpiredSent:true});
+}
+
+index++;
+setTimeout(openNext, 1200); // يفتح كل 1.2 ثانية
+}
+
+openNext();
+}
 function render(){
 $("list").innerHTML="";
 let t=0,a=0,e=0,u=0;
