@@ -112,7 +112,7 @@ th{background:var(--main);color:#fff}
 
 <script>
 const firebaseConfig={
-apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
+apiKey:"YOUR_API_KEY",
 authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
 projectId:"systeme-des-abonnements-6a98c",
 storageBucket:"systeme-des-abonnements-6a98c.firebasestorage.app",
@@ -146,29 +146,18 @@ subs=[];
 snapshot.forEach(doc=>{
 subs.push({id:doc.id,...doc.data()});
 });
-subs.sort((a,b)=> new Date(b.createdAt||0)-new Date(a.createdAt||0));
+subs.sort((a,b)=> b.createdAt?.seconds - a.createdAt?.seconds);
 render();
 });
 }
 
-function calcDays(endISO){
-
-  const now = new Date();
-  const today = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-
-  const endDateObj = new Date(endISO);
-  const end = new Date(
-    endDateObj.getFullYear(),
-    endDateObj.getMonth(),
-    endDateObj.getDate()
-  );
-
-  const diffTime = end.getTime() - today.getTime();
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+function calcDays(endTimestamp){
+if(!endTimestamp) return 0;
+let endDate=new Date(endTimestamp.seconds*1000);
+let now=new Date();
+let today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+let end=new Date(endDate.getFullYear(),endDate.getMonth(),endDate.getDate());
+return Math.floor((end-today)/(1000*60*60*24));
 }
 
 function onSearch(v){searchText=v.toLowerCase();render();}
@@ -180,12 +169,9 @@ if(!days||!$("name").value||!$("phone").value||!$("product").value){
 alert("املأ الحقول المطلوبة ⚠");
 return;
 }
-let end = new Date();
-end = new Date(
-  end.getFullYear(),
-  end.getMonth(),
-  end.getDate() + days
-);
+let now=new Date();
+let end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+days);
+
 await db.collection("subs").add({
 name:$("name").value,
 phone:$("phone").value,
@@ -193,15 +179,15 @@ email:$("email").value,
 profile:$("profile").value,
 product:$("product").value,
 price:$("price").value,
-end:end.toISOString(),
+end:firebase.firestore.Timestamp.fromDate(end),
 paid:false,
 alert3Sent:false,
 alertExpiredSent:false,
-createdAt:new Date()
+createdAt:firebase.firestore.Timestamp.now()
 });
 
 ["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
-alert("✅ تمت الإضافة بنجاح");
+alert("✅ تمت الإضافة");
 }
 
 async function editSub(id){
@@ -215,11 +201,11 @@ async function renewSub(id){
 let s=subs.find(x=>x.id===id);
 let days=parseInt(prompt("عدد أيام التجديد"),10);
 if(!days)return;
-let base=new Date(s.end);
+let base=new Date(s.end.seconds*1000);
 if(calcDays(s.end)<0) base=new Date();
-base.setDate(base.getDate()+days);
+base=new Date(base.getFullYear(),base.getMonth(),base.getDate()+days);
 await db.collection("subs").doc(id).update({
-end:base.toISOString(),
+end:firebase.firestore.Timestamp.fromDate(base),
 alert3Sent:false,
 alertExpiredSent:false
 });
@@ -237,9 +223,7 @@ await db.collection("subs").doc(id).update({paid:val});
 
 function formatPhone(phone){
 phone=phone.replace(/\D/g,"");
-if(phone.startsWith("0")){
-phone="213"+phone.substring(1);
-}
+if(phone.startsWith("0")) phone="213"+phone.substring(1);
 return phone;
 }
 
@@ -255,65 +239,29 @@ let msg=days<0?
 اشتراك ${product}
 سينتهي بتاريخ ${endDate} ⏰
 متبقي ${days} أيام.`;
-
 window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
 }
 
 async function sendAlerts(){
-
-let alerts = [];
-
+let alerts=[];
 for(let s of subs){
-let diff = calcDays(s.end);
-
-if(diff === 3 && !s.alert3Sent){
-alerts.push({type:"before", sub:s});
+let diff=calcDays(s.end);
+if(diff===3&&!s.alert3Sent) alerts.push({type:"before",sub:s});
+if(diff<0&&!s.alertExpiredSent) alerts.push({type:"expired",sub:s});
 }
+if(alerts.length===0){alert("لا توجد تنبيهات ✅");return;}
 
-if(diff < 0 && !s.alertExpiredSent){
-alerts.push({type:"expired", sub:s});
-}
-}
-
-if(alerts.length === 0){
-alert("لا توجد تنبيهات حالياً ✅");
-return;
-}
-
-let index = 0;
-
+let i=0;
 function openNext(){
-
-if(index >= alerts.length){
-alert("✅ تم فتح جميع المحادثات");
-return;
+if(i>=alerts.length){alert("تم فتح كل المحادثات ✅");return;}
+let item=alerts[i],s=item.sub,diff=calcDays(s.end);
+sendWhatsApp(s.phone,s.name,s.product,new Date(s.end.seconds*1000).toLocaleDateString("ar-DZ"),diff);
+db.collection("subs").doc(s.id).update(item.type==="before"?{alert3Sent:true}:{alertExpiredSent:true});
+i++;setTimeout(openNext,1200);
 }
-
-let item = alerts[index];
-let s = item.sub;
-let diff = calcDays(s.end);
-
-sendWhatsApp(
-s.phone,
-s.name,
-s.product,
-new Date(s.end).toLocaleDateString(),
-diff
-);
-
-if(item.type === "before"){
-db.collection("subs").doc(s.id).update({alert3Sent:true});
-}
-if(item.type === "expired"){
-db.collection("subs").doc(s.id).update({alertExpiredSent:true});
-}
-
-index++;
-setTimeout(openNext, 1200); // يفتح كل 1.2 ثانية
-}
-
 openNext();
 }
+
 function render(){
 $("list").innerHTML="";
 let t=0,a=0,e=0,u=0;
@@ -326,9 +274,6 @@ if(currentFilter==="active"&&diff<0)return;
 if(currentFilter==="expired"&&diff>=0)return;
 if(currentFilter==="unpaid"&&s.paid)return;
 
-let full=(s.name+" "+s.phone+" "+(s.email||"")+" "+(s.profile||"")+" "+s.product+" "+(s.price||"")).toLowerCase();
-if(searchText&&!full.includes(searchText))return;
-
 let tr=document.createElement("tr");
 tr.className=!s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
 
@@ -339,12 +284,12 @@ tr.innerHTML=`
 <td>${s.profile||"-"}</td>
 <td>${s.product}</td>
 <td>${s.price||"-"}</td>
-<td>${new Date(s.end).toLocaleDateString()}</td>
+<td>${new Date(s.end.seconds*1000).toLocaleDateString("ar-DZ")}</td>
 <td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff<0?'منتهي':diff}</span></td>
 <td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
 <td class="actions">
-<button class="main" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${new Date(s.end).toLocaleDateString()}',${diff})">💬</button>
-<button class="success" onclick="editSub('${s.id}')">✏️</button>
+<button class="main" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${new Date(s.end.seconds*1000).toLocaleDateString("ar-DZ")}',${diff})">💬</button>
+<button class="success" onclick="editSub('${s.id}')">✏</button>
 <button class="warning" onclick="renewSub('${s.id}')">🔄</button>
 <button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
 </td>`;
