@@ -27,7 +27,7 @@ button{border:none;border-radius:8px;cursor:pointer;color:#fff}
 .filters,.stats{display:flex;gap:5px;flex-wrap:wrap}
 .filters button,.stats div{flex:1}
 .stats div{background:#eef3fa;padding:10px;border-radius:10px;text-align:center;font-weight:bold}
-table{width:100%;border-collapse:collapse;min-width:1000px}
+table{width:100%;border-collapse:collapse;min-width:1200px}
 th,td{border:1px solid #ddd;padding:6px;text-align:center;font-size:13px}
 th{background:var(--main);color:#fff}
 .row-ok{background:#e8f5e9}
@@ -113,8 +113,11 @@ th{background:var(--main);color:#fff}
 <script>
 const firebaseConfig={
 apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
-authDomain:"http://systeme-des-abonnements-6a98c.firebaseapp.com/",
-projectId:"systeme-des-abonnements-6a98c"
+authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
+projectId:"systeme-des-abonnements-6a98c",
+storageBucket:"systeme-des-abonnements-6a98c.firebasestorage.app",
+messagingSenderId:"74948745712",
+appId:"1:74948745712:web:91eab4492f02bde4baa535"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -125,22 +128,6 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 const $=id=>document.getElementById(id);
 let subs=[],currentFilter="all",searchText="";
 
-/* ======== حساب الأيام المحلي 100% ======== */
-function todayString(){
-let t=new Date();
-let y=t.getFullYear();
-let m=String(t.getMonth()+1).padStart(2,'0');
-let d=String(t.getDate()).padStart(2,'0');
-return `${y}-${m}-${d}`;
-}
-
-function calcDays(endDate){
-let d1=new Date(todayString());
-let d2=new Date(endDate);
-return Math.floor((d2-d1)/86400000);
-}
-
-/* ======== تسجيل ======== */
 function login(){
 auth.signInWithEmailAndPassword($("loginEmail").value,$("loginPass").value)
 .catch(e=>alert(e.message));
@@ -154,31 +141,51 @@ if(u)loadSubs();
 });
 
 function loadSubs(){
-db.collection("subs").onSnapshot(s=>{
+db.collection("subs").onSnapshot(snapshot=>{
 subs=[];
-s.forEach(d=>subs.push({id:d.id,...d.data()}));
+snapshot.forEach(doc=>{
+subs.push({id:doc.id,...doc.data()});
+});
+subs.sort((a,b)=> new Date(b.createdAt||0)-new Date(a.createdAt||0));
 render();
 });
+}
+
+function calcDays(endISO){
+
+const now = new Date();
+const today = new Date(
+now.getFullYear(),
+now.getMonth(),
+now.getDate()
+);
+
+const endDateObj = new Date(endISO);
+const end = new Date(
+endDateObj.getFullYear(),
+endDateObj.getMonth(),
+endDateObj.getDate()
+);
+
+const diffTime = end.getTime() - today.getTime();
+return Math.floor(diffTime / (1000 * 60 * 60 * 24));
 }
 
 function onSearch(v){searchText=v.toLowerCase();render();}
 function setFilter(f){currentFilter=f;render();}
 
-/* ======== إضافة ======== */
 async function addSub(){
 let days=parseInt($("days").value,10);
 if(!days||!$("name").value||!$("phone").value||!$("product").value){
-alert("املأ الحقول المطلوبة ⚠");return;
+alert("املأ الحقول المطلوبة ⚠");
+return;
 }
-
-let base=new Date();
-base.setDate(base.getDate()+days);
-
-let y=base.getFullYear();
-let m=String(base.getMonth()+1).padStart(2,'0');
-let d=String(base.getDate()).padStart(2,'0');
-let endDate=`${y}-${m}-${d}`;
-
+let end = new Date();
+end = new Date(
+end.getFullYear(),
+end.getMonth(),
+end.getDate() + days
+);
 await db.collection("subs").add({
 name:$("name").value,
 phone:$("phone").value,
@@ -186,21 +193,169 @@ email:$("email").value,
 profile:$("profile").value,
 product:$("product").value,
 price:$("price").value,
-endDate:endDate,
+end: firebase.firestore.Timestamp.fromDate(end),
 paid:false,
+alert3Sent:false,
+alertExpiredSent:false,
+createdAt:new Date()
+});
+
+["name","phone","email","profile","product","price","days"].forEach(i=>$(i).value="");
+alert("✅ تمت الإضافة بنجاح");
+}
+
+async function editSub(id){
+let s=subs.find(x=>x.id===id);
+let newName=prompt("الاسم",s.name);
+if(!newName)return;
+await db.collection("subs").doc(id).update({name:newName});
+}
+
+async function renewSub(id){
+let s=subs.find(x=>x.id===id);
+let days=parseInt(prompt("عدد أيام التجديد"),10);
+if(!days)return;
+let base=new Date(s.end);
+if(calcDays(s.end)<0) base=new Date();
+base.setDate(base.getDate()+days);
+await db.collection("subs").doc(id).update({
+end:base.toISOString(),
 alert3Sent:false,
 alertExpiredSent:false
 });
-
-["name","phone","email","profile","product","price","days"]
-.forEach(i=>$(i).value="");
-
-alert("✅ تمت الإضافة");
 }
 
-/* ======== باقي الدوال (تجديد، حذف، تعديل، واتساب، تنبيهات، render) ======== */
-/* نفس المنطق السابق بدون أي ISO أو UTC */
+async function deleteSub(id){
+if(confirm("حذف؟")){
+await db.collection("subs").doc(id).delete();
+}
+}
 
+async function togglePaid(id,val){
+await db.collection("subs").doc(id).update({paid:val});
+}
+
+function formatPhone(phone){
+phone=phone.replace(/\D/g,"");
+if(phone.startsWith("0")){
+phone="213"+phone.substring(1);
+}
+return phone;
+}
+
+function sendWhatsApp(phone,name,product,endDate,days){
+if(!phone)return;
+phone=formatPhone(phone);
+let msg=days<0?
+`مرحباً 👋
+اشتراك ${product}
+انتهى بتاريخ ${endDate} ⛔
+يرجى التجديد.`:
+`مرحباً 👋
+اشتراك ${product}
+سينتهي بتاريخ ${endDate} ⏰
+متبقي ${days} أيام.`;
+
+window.open("https://wa.me/"+phone+"?text="+encodeURIComponent(msg),"_blank");
+}
+
+async function sendAlerts(){
+
+let alerts = [];
+
+for(let s of subs){
+let diff = calcDays(s.end);
+
+if(diff === 3 && !s.alert3Sent){
+alerts.push({type:"before", sub:s});
+}
+
+if(diff < 0 && !s.alertExpiredSent){
+alerts.push({type:"expired", sub:s});
+}
+}
+
+if(alerts.length === 0){
+alert("لا توجد تنبيهات حالياً ✅");
+return;
+}
+
+let index = 0;
+
+function openNext(){
+
+if(index >= alerts.length){
+alert("✅ تم فتح جميع المحادثات");
+return;
+}
+
+let item = alerts[index];
+let s = item.sub;
+let diff = calcDays(s.end);
+
+sendWhatsApp(
+s.phone,
+s.name,
+s.product,
+new Date(s.end).toLocaleDateString(),
+diff
+);
+
+if(item.type === "before"){
+db.collection("subs").doc(s.id).update({alert3Sent:true});
+}
+if(item.type === "expired"){
+db.collection("subs").doc(s.id).update({alertExpiredSent:true});
+}
+
+index++;
+setTimeout(openNext, 1200); // يفتح كل 1.2 ثانية
+}
+
+openNext();
+}
+function render(){
+$("list").innerHTML="";
+let t=0,a=0,e=0,u=0;
+
+subs.forEach(s=>{
+let diff=calcDays(s.end);
+t++; diff<0?e++:a++; if(!s.paid)u++;
+
+if(currentFilter==="active"&&diff<0)return;
+if(currentFilter==="expired"&&diff>=0)return;
+if(currentFilter==="unpaid"&&s.paid)return;
+
+let full=(s.name+" "+s.phone+" "+(s.email||"")+" "+(s.profile||"")+" "+s.product+" "+(s.price||"")).toLowerCase();
+if(searchText&&!full.includes(searchText))return;
+
+let tr=document.createElement("tr");
+tr.className=!s.paid?"row-unpaid":diff<0?"row-expired":diff<=3?"row-warn":"row-ok";
+
+tr.innerHTML=`
+<td>${s.name}</td>
+<td>${s.phone}</td>
+<td>${s.email||"-"}</td>
+<td>${s.profile||"-"}</td>
+<td>${s.product}</td>
+<td>${s.price||"-"}</td>
+<td>${new Date(s.end).toLocaleDateString()}</td>
+<td><span class="days-box ${diff<0?'days-expired':diff<=3?'days-warn':'days-ok'}">${diff<0?'منتهي':diff}</span></td>
+<td><input type="checkbox" ${s.paid?"checked":""} onclick="togglePaid('${s.id}',this.checked)"></td>
+<td class="actions">
+<button class="main" onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${new Date(s.end).toLocaleDateString()}',${diff})">💬</button>
+<button class="success" onclick="editSub('${s.id}')">✏️</button>
+<button class="warning" onclick="renewSub('${s.id}')">🔄</button>
+<button class="danger" onclick="deleteSub('${s.id}')">🗑</button>
+</td>`;
+$("list").appendChild(tr);
+});
+
+$("stTotal").textContent=t;
+$("stActive").textContent=a;
+$("stExpired").textContent=e;
+$("stUnpaid").textContent=u;
+}
 </script>
 
 </body>
