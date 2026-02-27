@@ -1,5 +1,7 @@
 const admin = require("firebase-admin");
-const fetch = require("node-fetch");
+
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
@@ -20,26 +22,26 @@ function calcDays(endDate) {
 }
 
 function buildMessage(sub, diff) {
-  if (diff < 0) {
-    return `مرحباً 👋
-🎖️Yazid STORE 🎖️
+  if (diff <= 0) {
+    return مرحباً 👋
+🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
-نود إعلامكم أن اشتراككم في خدمة
+نود إعلامكم أن اشتراككم في خدمة 
 ${sub.product}
 قد انتهى بتاريخ ${sub.endDate} ⛔
 
 📌 في حال الرغبة في التجديد
 يرجى الرد على هذه الرسالة.
 
-نحن في خدمتكم دائماً 🌟`;
+نحن في خدمتكم دائماً 🌟;
   }
 
-  return `مرحباً 👋
-🎖️Yazid STORE 🎖️
+  return مرحباً 👋
+🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
-نود إعلامكم أن اشتراككم في خدمة
+نود إعلامكم أن اشتراككم في خدمة 
 ${sub.product}
 سينتهي بتاريخ ${sub.endDate} ⏰
 
@@ -48,46 +50,54 @@ ${sub.product}
 📌 في حال الرغبة في التجديد أو الاستفسار
 يرجى الرد على هذه الرسالة.
 
-نحن في خدمتكم دائماً 🌟`;
+نحن في خدمتكم دائماً 🌟;
 }
 
-async function sendTelegram(text) {
-  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
+async function sendTelegramMessage(text) {
+  const token = process.env.TELEGRAM_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
 
-  await fetch(url, {
+  await fetch(https://api.telegram.org/bot${token}/sendMessage, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      chat_id: process.env.TELEGRAM_CHAT_ID,
+      chat_id: chatId,
       text: text,
     }),
   });
 }
 
-async function main() {
-  const snapshot = await db.collection("subs").get();
+async function checkSubscriptions() {
+  const snapshot = await db.collection("subscriptions").get();
 
   for (const doc of snapshot.docs) {
     const sub = doc.data();
-
-    if (!sub.endDate) continue;
-
     const diff = calcDays(sub.endDate);
 
     // تنبيه قبل 3 أيام
-    if (diff === 3 && !sub.alert3Sent) {
-      const msg = buildMessage(sub, diff);
-      await sendTelegram(msg);
-      await doc.ref.update({ alert3Sent: true });
+    if (diff === 3 && !sub.notifiedBefore) {
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
+
+      await doc.ref.update({ notifiedBefore: true });
     }
 
     // تنبيه عند الانتهاء
-    if (diff < 0 && !sub.alertExpiredSent) {
-      const msg = buildMessage(sub, diff);
-      await sendTelegram(msg);
-      await doc.ref.update({ alertExpiredSent: true });
+    if (diff <= 0 && !sub.notifiedExpired) {
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
+
+      await doc.ref.update({ notifiedExpired: true });
     }
   }
 }
 
-main();
+checkSubscriptions()
+  .then(() => {
+    console.log("Done");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
