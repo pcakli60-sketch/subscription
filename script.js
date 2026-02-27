@@ -16,7 +16,7 @@ async function run() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: "🔥 البوت يخدم من GitHub Actions 100%",
+        text: "🔥 البوت يخدم 100%",
       }),
     }
   );
