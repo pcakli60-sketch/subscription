@@ -72,32 +72,4 @@ async function checkSubscriptions() {
 
   for (const doc of snapshot.docs) {
     const sub = doc.data();
-    const diff = calcDays(sub.endDate);
-
-    // تنبيه قبل 3 أيام
-    if (diff === 3 && !sub.notifiedBefore) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-
-      await doc.ref.update({ notifiedBefore: true });
-    }
-
-    // تنبيه عند الانتهاء
-    if (diff <= 0 && !sub.notifiedExpired) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-
-      await doc.ref.update({ notifiedExpired: true });
-    }
-  }
-}
-
-checkSubscriptions()
-  .then(() => {
-    console.log("Done");
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+    const diff
