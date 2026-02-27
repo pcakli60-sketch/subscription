@@ -74,34 +74,26 @@ async function checkSubscriptions() {
     const sub = doc.data();
     const diff = calcDays(sub.endDate);
 
-    // تنبيه قبل 3 أيام (مرة واحدة فقط)
     if (diff === 3 && !sub.notifiedBefore) {
       const message = buildMessage(sub, diff);
       await sendTelegramMessage(message);
-
-      await doc.ref.update({
-        notifiedBefore: true,
-      });
+      await doc.ref.update({ notifiedBefore: true });
     }
 
-    // تنبيه عند الانتهاء (مرة واحدة فقط)
     if (diff <= 0 && !sub.notifiedExpired) {
       const message = buildMessage(sub, diff);
       await sendTelegramMessage(message);
-
-      await doc.ref.update({
-        notifiedExpired: true,
-      });
+      await doc.ref.update({ notifiedExpired: true });
     }
   }
 }
 
 checkSubscriptions()
   .then(() => {
-    console.log("Finished successfully");
+    console.log("Success");
     process.exit(0);
   })
   .catch((err) => {
-    console.error("Error:", err);
+    console.error(err);
     process.exit(1);
   });
