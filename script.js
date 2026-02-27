@@ -20,8 +20,8 @@ function calcDays(endDate) {
 
 function buildMessage(sub, diff) {
   if (diff <= 0) {
-    return مرحباً 👋
-🎖️ Yazid STORE 🎖️
+return `مرحباً 👋`
+     🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
 نود إعلامكم أن اشتراككم في خدمة
@@ -33,7 +33,7 @@ ${sub.product}
 نحن في خدمتكم دائماً 🌟;
   }
 
-  return مرحباً 👋
+  return `مرحباً 👋`
 🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
