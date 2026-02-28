@@ -1,6 +1,9 @@
 const admin = require("firebase-admin");
 
-// Firebase
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+// 🔐 Service Account من GitHub Secret
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -9,7 +12,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// حساب الأيام المتبقية
+// 📅 حساب الفرق بالأيام
 function calcDays(endDate) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -20,16 +23,15 @@ function calcDays(endDate) {
   return Math.floor((end - today) / (1000 * 60 * 60 * 24));
 }
 
-// بناء الرسالة
+// ✉️ بناء الرسالة
 function buildMessage(sub, diff) {
   if (diff <= 0) {
     return `مرحباً 👋
 🎖️ Yazid STORE 🎖️
-Numéro WhatsApp : 0541 23 35 75
 
 نود إعلامكم أن اشتراككم في خدمة
 ${sub.product}
-قد انتهى بتاريخ ${sub.endDate} ⛔
+قد انتهى بتاريخ ${sub.end.toDate().toLocaleDateString()} ⛔
 
 📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
 
@@ -38,11 +40,10 @@ ${sub.product}
 
   return `مرحباً 👋
 🎖️ Yazid STORE 🎖️
-Numéro WhatsApp : 0541 23 35 75
 
-اشتراككم في خدمة
+نود إعلامكم أن اشتراككم في خدمة
 ${sub.product}
-سينتهي بتاريخ ${sub.endDate} ⏰
+سينتهي بتاريخ ${sub.end.toDate().toLocaleDateString()} ⏰
 
 ⏳ عدد الأيام المتبقية: ${diff} أيام
 
@@ -51,7 +52,7 @@ ${sub.product}
 نحن في خدمتكم دائماً 🌟`;
 }
 
-// إرسال رسالة Telegram
+// 📲 إرسال Telegram
 async function sendTelegramMessage(text) {
   const token = process.env.TELEGRAM_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -60,25 +61,20 @@ async function sendTelegramMessage(text) {
     throw new Error("Missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID");
   }
 
-  const response = await fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-      }),
-    }
-  );
-
-  const data = await response.json();
-  console.log(data);
+  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text: text,
+    }),
+  });
 }
 
-// التحقق من الاشتراكات
+// 🔍 فحص الاشتراكات
 async function checkSubscriptions() {
-const snapshot = await db.collection("subs").get();
+  const snapshot = await db.collection("subs").get();
+
   if (snapshot.empty) {
     console.log("No subscriptions found.");
     return;
@@ -89,31 +85,33 @@ const snapshot = await db.collection("subs").get();
 
     if (!sub.end || !sub.product) continue;
 
-const diff = calcDays(sub.end.toDate());
+    const diff = calcDays(sub.end.toDate());
 
-// 3 أيام قبل الانتهاء
-if (diff === 3 && !sub.alert3Sent) {
-  const message = buildMessage(sub, diff);
-  await sendTelegramMessage(message);
-  await doc.ref.update({ alert3Sent: true });
-  console.log("Sent 3-day reminder");
+    // 🔔 قبل 3 أيام
+    if (diff === 3 && !sub.alert3Sent) {
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
+      await doc.ref.update({ alert3Sent: true });
+      console.log("Sent 3-day reminder");
+    }
+
+    // ⛔ منتهي
+    if (diff <= 0 && !sub.alertExpiredSent) {
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
+      await doc.ref.update({ alertExpiredSent: true });
+      console.log("Sent expiration message");
+    }
+  }
 }
 
-// انتهى الاشتراك
-if (diff <= 0 && !sub.alertExpiredSent) {
-  const message = buildMessage(sub, diff);
-  await sendTelegramMessage(message);
-  await doc.ref.update({ alertExpiredSent: true });
-  console.log("Sent expiration message");
-}
-
-// تشغيل
+// 🚀 تشغيل
 checkSubscriptions()
   .then(() => {
     console.log("Subscription check completed.");
     process.exit(0);
   })
   .catch((err) => {
-    console.error(err);
+    console.error("Error:", err);
     process.exit(1);
   });
