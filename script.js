@@ -78,8 +78,7 @@ async function sendTelegramMessage(text) {
 
 // التحقق من الاشتراكات
 async function checkSubscriptions() {
-  const snapshot = await db.collection("subscriptions").get();
-
+const snapshot = await db.collection("subs").get();
   if (snapshot.empty) {
     console.log("No subscriptions found.");
     return;
