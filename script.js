@@ -87,24 +87,24 @@ const snapshot = await db.collection("subs").get();
   for (const doc of snapshot.docs) {
     const sub = doc.data();
 
-    if (!sub.endDate || !sub.product) continue;
+    if (!sub.end || !sub.product) continue;
 
-    const diff = calcDays(sub.endDate);
+const diff = calcDays(sub.end.toDate());
 
-    // قبل 3 أيام
-    if (diff === 3 && !sub.notifiedBefore) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-      await doc.ref.update({ notifiedBefore: true });
-    }
+// 3 أيام قبل الانتهاء
+if (diff === 3 && !sub.alert3Sent) {
+  const message = buildMessage(sub, diff);
+  await sendTelegramMessage(message);
+  await doc.ref.update({ alert3Sent: true });
+  console.log("Sent 3-day reminder");
+}
 
-    // عند الانتهاء
-    if (diff <= 0 && !sub.notifiedExpired) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-      await doc.ref.update({ notifiedExpired: true });
-    }
-  }
+// انتهى الاشتراك
+if (diff <= 0 && !sub.alertExpiredSent) {
+  const message = buildMessage(sub, diff);
+  await sendTelegramMessage(message);
+  await doc.ref.update({ alertExpiredSent: true });
+  console.log("Sent expiration message");
 }
 
 // تشغيل
