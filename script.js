@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 
+// Firebase
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
 admin.initializeApp({
@@ -8,6 +9,7 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
+// حساب الأيام المتبقية
 function calcDays(endDate) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -18,9 +20,11 @@ function calcDays(endDate) {
   return Math.floor((end - today) / (1000 * 60 * 60 * 24));
 }
 
+// بناء الرسالة
 function buildMessage(sub, diff) {
   if (diff <= 0) {
-return `مرحباً 👋`
+    return `مرحباً 👋
+🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
 نود إعلامكم أن اشتراككم في خدمة
@@ -29,23 +33,25 @@ ${sub.product}
 
 📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
 
-نحن في خدمتكم دائماً 🌟;
+نحن في خدمتكم دائماً 🌟`;
   }
 
-  return `مرحباً 👋`
+  return `مرحباً 👋
+🎖️ Yazid STORE 🎖️
 Numéro WhatsApp : 0541 23 35 75
 
-نود إعلامكم أن اشتراككم في خدمة
+اشتراككم في خدمة
 ${sub.product}
 سينتهي بتاريخ ${sub.endDate} ⏰
 
 ⏳ عدد الأيام المتبقية: ${diff} أيام
 
-📌 في حال الرغبة في التجديد أو الاستفسار يرجى الرد على هذه الرسالة.
+📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
 
-نحن في خدمتكم دائماً 🌟;
+نحن في خدمتكم دائماً 🌟`;
 }
 
+// إرسال رسالة Telegram
 async function sendTelegramMessage(text) {
   const token = process.env.TELEGRAM_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
@@ -55,7 +61,7 @@ async function sendTelegramMessage(text) {
   }
 
   const response = await fetch(
-    https://api.telegram.org/bot${token}/sendMessage,
+    `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,6 +76,7 @@ async function sendTelegramMessage(text) {
   console.log(data);
 }
 
+// التحقق من الاشتراكات
 async function checkSubscriptions() {
   const snapshot = await db.collection("subscriptions").get();
 
@@ -85,12 +92,14 @@ async function checkSubscriptions() {
 
     const diff = calcDays(sub.endDate);
 
+    // قبل 3 أيام
     if (diff === 3 && !sub.notifiedBefore) {
       const message = buildMessage(sub, diff);
       await sendTelegramMessage(message);
       await doc.ref.update({ notifiedBefore: true });
     }
 
+    // عند الانتهاء
     if (diff <= 0 && !sub.notifiedExpired) {
       const message = buildMessage(sub, diff);
       await sendTelegramMessage(message);
@@ -99,6 +108,7 @@ async function checkSubscriptions() {
   }
 }
 
+// تشغيل
 checkSubscriptions()
   .then(() => {
     console.log("Subscription check completed.");
