@@ -72,37 +72,9 @@ async function sendTelegramMessage(text) {
 }
 
 // 🔍 فحص الاشتراكات
+  
 async function checkSubscriptions() {
-  const snapshot = await db.collection("subs").get();
-
-  if (snapshot.empty) {
-    console.log("No subscriptions found.");
-    return;
-  }
-
-  for (const doc of snapshot.docs) {
-    const sub = doc.data();
-
-    if (!sub.end || !sub.product) continue;
-
-    const diff = calcDays(sub.end.toDate());
-
-    // 🔔 قبل 3 أيام
-    if (diff === 3 && !sub.alert3Sent) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-      await doc.ref.update({ alert3Sent: true });
-      console.log("Sent 3-day reminder");
-    }
-
-    // ⛔ منتهي
-    if (diff <= 0 && !sub.alertExpiredSent) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
-      await doc.ref.update({ alertExpiredSent: true });
-      console.log("Sent expiration message");
-    }
-  }
+  await sendTelegramMessage("🔥 BOT BACK ONLINE 🔥");
 }
 
 // 🚀 تشغيل
