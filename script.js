@@ -1,58 +1,75 @@
-const admin = require("firebase-admin");
-const fetch = require("node-fetch");
+// ===============================
+// 🔥 TELEGRAM SUBSCRIPTION BOT
+// Compatible with Node 18+
+// ===============================
 
-// =======================
+const admin = require("firebase-admin");
+
+// ===============================
 // 🔐 ENV VARIABLES
-// =======================
+// ===============================
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
+const FIREBASE_KEY = process.env.FIREBASE_KEY;
 
-// =======================
-// 🔥 Firebase Init
-// =======================
-const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
+if (!BOT_TOKEN || !CHAT_ID || !FIREBASE_KEY) {
+  console.error("❌ Missing environment variables.");
+  process.exit(1);
+}
 
+// ===============================
+// 🔥 FIREBASE INIT
+// ===============================
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(JSON.parse(FIREBASE_KEY)),
 });
 
 const db = admin.firestore();
 
-// =======================
-// 📤 Send Telegram Message
-// =======================
+// ===============================
+// 📤 SEND TELEGRAM MESSAGE
+// ===============================
 async function sendTelegramMessage(text, keyboard = null) {
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  const response = await fetch(
+    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        text: text,
+        parse_mode: "HTML",
+        reply_markup: keyboard,
+      }),
+    }
+  );
 
-  await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      chat_id: CHAT_ID,
-      text: text,
-      parse_mode: "HTML",
-      reply_markup: keyboard,
-    }),
-  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Telegram Error:", errorText);
+  }
 }
 
-// =======================
-// 📅 Calculate Days
-// =======================
+// ===============================
+// 📅 CALCULATE DAYS DIFFERENCE
+// ===============================
 function calcDays(endDate) {
   const now = new Date();
   const end = new Date(endDate);
-  const diffTime = end - now;
-  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  const diff = end - now;
+  return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-// =======================
-// 💬 Build Message
-// =======================
+// ===============================
+// 💬 BUILD MESSAGE
+// ===============================
 function buildMessage(sub, diff) {
-  const waLink = `https://wa.me/213${sub.phone}?text=Bonjour ${sub.name}, votre abonnement ${sub.product} expire le ${new Date(sub.end).toLocaleDateString()}`;
+  const endDate = new Date(sub.end).toLocaleDateString();
 
-  let status = "";
+  const waLink = `https://wa.me/213${sub.phone}?text=Bonjour ${sub.name}, votre abonnement ${sub.product} expire le ${endDate}`;
+
+  let status;
+
   if (diff <= 0) {
     status = "❌ <b>ABONNEMENT EXPIRÉ</b>";
   } else {
@@ -64,7 +81,7 @@ ${status}
 
 👤 <b>${sub.name}</b>
 📺 ${sub.product}
-📅 Fin: ${new Date(sub.end).toLocaleDateString()}
+📅 Fin: ${endDate}
 📱 ${sub.phone}
 💰 ${sub.price}
 `;
@@ -83,9 +100,9 @@ ${status}
   return { message, keyboard };
 }
 
-// =======================
-// 🔎 Main Check Function
-// =======================
+// ===============================
+// 🔎 CHECK SUBSCRIPTIONS
+// ===============================
 async function checkSubscriptions() {
   console.log("🚀 Checking subscriptions...");
 
@@ -101,33 +118,43 @@ async function checkSubscriptions() {
 
     if (!sub.end) continue;
 
-    const diff = calcDays(sub.end.toDate ? sub.end.toDate() : sub.end);
+    const endDate =
+      sub.end.toDate ? sub.end.toDate() : new Date(sub.end);
 
-    console.log(`Checking ${sub.name} - diff=${diff}`);
+    const diff = calcDays(endDate);
 
-    // 🔔 3 DAYS OR LESS
+    console.log(`${sub.name} → diff=${diff}`);
+
+    // 🔔 ALERT 3 DAYS OR LESS
     if (diff <= 3 && diff > 0 && !sub.alert3Sent) {
       const { message, keyboard } = buildMessage(sub, diff);
+
       await sendTelegramMessage(message, keyboard);
 
       await doc.ref.update({ alert3Sent: true });
-      console.log("3-day alert sent.");
+
+      console.log("✅ 3-day alert sent.");
     }
 
-    // ❌ EXPIRED
+    // ❌ EXPIRED ALERT
     if (diff <= 0 && !sub.alertExpiredSent) {
       const { message, keyboard } = buildMessage(sub, diff);
+
       await sendTelegramMessage(message, keyboard);
 
       await doc.ref.update({ alertExpiredSent: true });
-      console.log("Expired alert sent.");
+
+      console.log("✅ Expired alert sent.");
     }
   }
 
-  console.log("✅ Done.");
+  console.log("🏁 Done.");
 }
 
-// =======================
-// ▶️ Run
-// =======================
-checkSubscriptions();
+// ===============================
+// ▶️ RUN
+// ===============================
+checkSubscriptions().catch((err) => {
+  console.error("Fatal Error:", err);
+  process.exit(1);
+});
