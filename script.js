@@ -1,18 +1,38 @@
+// ==========================================
+// 🔥 Yazid Subscription Telegram Bot
+// Node 18+ (fetch built-in) — No ESM issues
+// ==========================================
+
 const admin = require("firebase-admin");
 
 // =============================
-// 🔐 FIREBASE INIT
+// 🔐 ENV VARIABLES (GitHub Secrets)
 // =============================
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+const {
+  FIREBASE_SERVICE_ACCOUNT,
+  TELEGRAM_TOKEN,
+  TELEGRAM_CHAT_ID,
+  COUNTRY_CODE = "213" // Default Algeria
+} = process.env;
 
+if (!FIREBASE_SERVICE_ACCOUNT || !TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
+  console.error("❌ Missing required environment variables.");
+  process.exit(1);
+}
+
+// =============================
+// 🔥 FIREBASE INIT
+// =============================
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(
+    JSON.parse(FIREBASE_SERVICE_ACCOUNT)
+  ),
 });
 
 const db = admin.firestore();
 
 // =============================
-// 📅 حساب الفرق بالأيام (دقيق)
+// 📅 CALCULATE DAYS (midnight-safe)
 // =============================
 function calcDays(endDate) {
   const today = new Date();
@@ -25,29 +45,46 @@ function calcDays(endDate) {
 }
 
 // =============================
-// ✉️ بناء الرسالة
+// 📲 Build WhatsApp Link
+// =============================
+function buildWhatsAppLink(sub, formattedDate) {
+  if (!sub.phone) return null;
+
+  // Remove leading 0 if exists
+  const cleanPhone = String(sub.phone).replace(/^0+/, "");
+
+  const message = encodeURIComponent(
+    `Bonjour ${sub.name || ""}, votre abonnement ${sub.product} expire le ${formattedDate}.`
+  );
+
+  return `https://wa.me/${COUNTRY_CODE}${cleanPhone}?text=${message}`;
+}
+
+// =============================
+// ✉️ BUILD TELEGRAM MESSAGE
 // =============================
 function buildMessage(sub, diff) {
-  const endDate = sub.end.toDate
+  const endDate = sub.end?.toDate
     ? sub.end.toDate()
     : new Date(sub.end);
 
   const formattedDate = endDate.toLocaleDateString("fr-FR");
 
+  let text;
+
   if (diff <= 0) {
-    return `مرحباً 👋
+    text = `مرحباً 👋
 🎖️ Yazid STORE 🎖️
 
 نود إعلامكم أن اشتراككم في خدمة
 ${sub.product}
 قد انتهى بتاريخ ${formattedDate} ⛔
 
-📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
+📌 في حال الرغبة في التجديد يرجى التواصل معنا.
 
 نحن في خدمتكم دائماً 🌟`;
-  }
-
-  return `مرحباً 👋
+  } else {
+    text = `مرحباً 👋
 🎖️ Yazid STORE 🎖️
 
 نود إعلامكم أن اشتراككم في خدمة
@@ -56,47 +93,59 @@ ${sub.product}
 
 ⏳ عدد الأيام المتبقية: ${diff} أيام
 
-📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
+📌 في حال الرغبة في التجديد يرجى التواصل معنا.
 
 نحن في خدمتكم دائماً 🌟`;
+  }
+
+  const waLink = buildWhatsAppLink(sub, formattedDate);
+
+  const keyboard = waLink
+    ? {
+        inline_keyboard: [
+          [
+            {
+              text: "📲 إرسال WhatsApp",
+              url: waLink,
+            },
+          ],
+        ],
+      }
+    : undefined;
+
+  return { text, keyboard };
 }
 
 // =============================
-// 📲 إرسال Telegram (Node 18 fetch built-in)
+// 📤 SEND TELEGRAM MESSAGE
 // =============================
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  if (!token || !chatId) {
-    throw new Error("Missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID");
-  }
-
+async function sendTelegramMessage(text, keyboard) {
   const response = await fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
+        chat_id: TELEGRAM_CHAT_ID,
+        text,
+        reply_markup: keyboard,
       }),
     }
   );
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Telegram API Error:", errorText);
+    const err = await response.text();
+    console.error("Telegram API Error:", err);
   }
 }
 
 // =============================
-// 🔍 فحص الاشتراكات
+// 🔍 CHECK SUBSCRIPTIONS
 // =============================
 async function checkSubscriptions() {
   console.log("🚀 Checking subscriptions...");
 
-  const snapshot = await db.collection("subs").get();
+  const snapshot = await db.collection("subs").get(); // ⚠️ تأكد الاسم صحيح
 
   if (snapshot.empty) {
     console.log("No subscriptions found.");
@@ -108,38 +157,40 @@ async function checkSubscriptions() {
 
     if (!sub.end || !sub.product) continue;
 
-    const endDate = sub.end.toDate
+    const endDate = sub.end?.toDate
       ? sub.end.toDate()
       : new Date(sub.end);
 
     const diff = calcDays(endDate);
 
-    console.log(`${sub.product} → diff=${diff}`);
+    console.log(`➡ ${sub.product} | diff=${diff}`);
 
-    // 🔔 3 أيام أو أقل (مرة واحدة فقط)
+    // 🔔 3 أيام أو أقل (مرة واحدة)
     if (diff <= 3 && diff > 0 && !sub.alert3Sent) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
+      const { text, keyboard } = buildMessage(sub, diff);
 
+      await sendTelegramMessage(text, keyboard);
       await doc.ref.update({ alert3Sent: true });
-      console.log("✅ Sent reminder alert");
+
+      console.log("✅ 3-day alert sent.");
     }
 
-    // ⛔ منتهي أو 0 (مرة واحدة فقط)
+    // ⛔ منتهي أو 0 (مرة واحدة)
     if (diff <= 0 && !sub.alertExpiredSent) {
-      const message = buildMessage(sub, diff);
-      await sendTelegramMessage(message);
+      const { text, keyboard } = buildMessage(sub, diff);
 
+      await sendTelegramMessage(text, keyboard);
       await doc.ref.update({ alertExpiredSent: true });
-      console.log("✅ Sent expiration alert");
+
+      console.log("✅ Expired alert sent.");
     }
   }
 
-  console.log("🏁 Subscription check completed.");
+  console.log("🏁 Done.");
 }
 
 // =============================
-// 🚀 تشغيل
+// ▶️ RUN
 // =============================
 checkSubscriptions()
   .then(() => process.exit(0))
