@@ -15,14 +15,14 @@ const db = admin.firestore();
 // 📅 حساب الفرق بالأيام
 function calcDays(endDate) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  
+  // نحيد الوقت من التاريخين
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startOfEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
 
-  const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
-
-  return Math.floor((end - today) / (1000 * 60 * 60 * 24));
+  const diffTime = startOfEnd - startOfToday;
+  return Math.round(diffTime / (1000 * 60 * 60 * 24));
 }
-
 // ✉️ بناء الرسالة
 function buildMessage(sub, diff) {
   if (diff <= 0) {
