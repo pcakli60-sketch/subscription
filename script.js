@@ -1,112 +1,102 @@
-// ===============================
-// 🔥 TELEGRAM SUBSCRIPTION BOT
-// Compatible with Node 18+
-// ===============================
-
 const admin = require("firebase-admin");
 
-// ===============================
-// 🔐 ENV VARIABLES
-// ===============================
-const BOT_TOKEN = process.env.BOT_TOKEN;
-const CHAT_ID = process.env.CHAT_ID;
-const FIREBASE_KEY = process.env.FIREBASE_KEY;
+// =============================
+// 🔐 FIREBASE INIT
+// =============================
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-if (!BOT_TOKEN || !CHAT_ID || !FIREBASE_KEY) {
-  console.error("❌ Missing environment variables.");
-  process.exit(1);
-}
-
-// ===============================
-// 🔥 FIREBASE INIT
-// ===============================
 admin.initializeApp({
-  credential: admin.credential.cert(JSON.parse(FIREBASE_KEY)),
+  credential: admin.credential.cert(serviceAccount),
 });
 
 const db = admin.firestore();
 
-// ===============================
-// 📤 SEND TELEGRAM MESSAGE
-// ===============================
-async function sendTelegramMessage(text, keyboard = null) {
+// =============================
+// 📅 حساب الفرق بالأيام (دقيق)
+// =============================
+function calcDays(endDate) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const end = new Date(endDate);
+  end.setHours(0, 0, 0, 0);
+
+  return Math.floor((end - today) / (1000 * 60 * 60 * 24));
+}
+
+// =============================
+// ✉️ بناء الرسالة
+// =============================
+function buildMessage(sub, diff) {
+  const endDate = sub.end.toDate
+    ? sub.end.toDate()
+    : new Date(sub.end);
+
+  const formattedDate = endDate.toLocaleDateString("fr-FR");
+
+  if (diff <= 0) {
+    return `مرحباً 👋
+🎖️ Yazid STORE 🎖️
+
+نود إعلامكم أن اشتراككم في خدمة
+${sub.product}
+قد انتهى بتاريخ ${formattedDate} ⛔
+
+📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
+
+نحن في خدمتكم دائماً 🌟`;
+  }
+
+  return `مرحباً 👋
+🎖️ Yazid STORE 🎖️
+
+نود إعلامكم أن اشتراككم في خدمة
+${sub.product}
+سينتهي بتاريخ ${formattedDate} ⏰
+
+⏳ عدد الأيام المتبقية: ${diff} أيام
+
+📌 في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
+
+نحن في خدمتكم دائماً 🌟`;
+}
+
+// =============================
+// 📲 إرسال Telegram (Node 18 fetch built-in)
+// =============================
+async function sendTelegramMessage(text) {
+  const token = process.env.TELEGRAM_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+
+  if (!token || !chatId) {
+    throw new Error("Missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID");
+  }
+
   const response = await fetch(
-    `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,
+    `https://api.telegram.org/bot${token}/sendMessage`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: CHAT_ID,
+        chat_id: chatId,
         text: text,
-        parse_mode: "HTML",
-        reply_markup: keyboard,
       }),
     }
   );
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Telegram Error:", errorText);
+    console.error("Telegram API Error:", errorText);
   }
 }
 
-// ===============================
-// 📅 CALCULATE DAYS DIFFERENCE
-// ===============================
-function calcDays(endDate) {
-  const now = new Date();
-  const end = new Date(endDate);
-  const diff = end - now;
-  return Math.floor(diff / (1000 * 60 * 60 * 24));
-}
-
-// ===============================
-// 💬 BUILD MESSAGE
-// ===============================
-function buildMessage(sub, diff) {
-  const endDate = new Date(sub.end).toLocaleDateString();
-
-  const waLink = `https://wa.me/213${sub.phone}?text=Bonjour ${sub.name}, votre abonnement ${sub.product} expire le ${endDate}`;
-
-  let status;
-
-  if (diff <= 0) {
-    status = "❌ <b>ABONNEMENT EXPIRÉ</b>";
-  } else {
-    status = `⚠️ <b>Expire dans ${diff} jour(s)</b>`;
-  }
-
-  const message = `
-${status}
-
-👤 <b>${sub.name}</b>
-📺 ${sub.product}
-📅 Fin: ${endDate}
-📱 ${sub.phone}
-💰 ${sub.price}
-`;
-
-  const keyboard = {
-    inline_keyboard: [
-      [
-        {
-          text: "📲 Envoyer WhatsApp",
-          url: waLink,
-        },
-      ],
-    ],
-  };
-
-  return { message, keyboard };
-}
-
-// ===============================
-// 🔎 CHECK SUBSCRIPTIONS
-// ===============================
+// =============================
+// 🔍 فحص الاشتراكات
+// =============================
 async function checkSubscriptions() {
   console.log("🚀 Checking subscriptions...");
 
-  const snapshot = await db.collection("Subs").get();
+  const snapshot = await db.collection("subs").get();
 
   if (snapshot.empty) {
     console.log("No subscriptions found.");
@@ -116,45 +106,44 @@ async function checkSubscriptions() {
   for (const doc of snapshot.docs) {
     const sub = doc.data();
 
-    if (!sub.end) continue;
+    if (!sub.end || !sub.product) continue;
 
-    const endDate =
-      sub.end.toDate ? sub.end.toDate() : new Date(sub.end);
+    const endDate = sub.end.toDate
+      ? sub.end.toDate()
+      : new Date(sub.end);
 
     const diff = calcDays(endDate);
 
-    console.log(`${sub.name} → diff=${diff}`);
+    console.log(`${sub.product} → diff=${diff}`);
 
-    // 🔔 ALERT 3 DAYS OR LESS
+    // 🔔 3 أيام أو أقل (مرة واحدة فقط)
     if (diff <= 3 && diff > 0 && !sub.alert3Sent) {
-      const { message, keyboard } = buildMessage(sub, diff);
-
-      await sendTelegramMessage(message, keyboard);
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
 
       await doc.ref.update({ alert3Sent: true });
-
-      console.log("✅ 3-day alert sent.");
+      console.log("✅ Sent reminder alert");
     }
 
-    // ❌ EXPIRED ALERT
+    // ⛔ منتهي أو 0 (مرة واحدة فقط)
     if (diff <= 0 && !sub.alertExpiredSent) {
-      const { message, keyboard } = buildMessage(sub, diff);
-
-      await sendTelegramMessage(message, keyboard);
+      const message = buildMessage(sub, diff);
+      await sendTelegramMessage(message);
 
       await doc.ref.update({ alertExpiredSent: true });
-
-      console.log("✅ Expired alert sent.");
+      console.log("✅ Sent expiration alert");
     }
   }
 
-  console.log("🏁 Done.");
+  console.log("🏁 Subscription check completed.");
 }
 
-// ===============================
-// ▶️ RUN
-// ===============================
-checkSubscriptions().catch((err) => {
-  console.error("Fatal Error:", err);
-  process.exit(1);
-});
+// =============================
+// 🚀 تشغيل
+// =============================
+checkSubscriptions()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error("Fatal Error:", err);
+    process.exit(1);
+  });
