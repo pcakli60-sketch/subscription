@@ -1,9 +1,16 @@
 const admin = require("firebase-admin");
+const fetch = require("node-fetch");
 
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+// =======================
+// 🔐 ENV VARIABLES
+// =======================
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const CHAT_ID = process.env.CHAT_ID;
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+// =======================
+// 🔥 Firebase Init
+// =======================
+const serviceAccount = JSON.parse(process.env.FIREBASE_KEY);
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -11,45 +18,81 @@ admin.initializeApp({
 
 const db = admin.firestore();
 
-// 🔥 حساب الأيام بدون مشاكل توقيت
-function calcDays(endDate) {
-  const now = new Date();
+// =======================
+// 📤 Send Telegram Message
+// =======================
+async function sendTelegramMessage(text, keyboard = null) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
 
-  const today = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  );
-
-  const end = new Date(
-    endDate.getFullYear(),
-    endDate.getMonth(),
-    endDate.getDate()
-  );
-
-  const diffTime = end.getTime() - today.getTime();
-  return Math.round(diffTime / (1000 * 60 * 60 * 24));
-}
-
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      chat_id: chatId,
+      chat_id: CHAT_ID,
       text: text,
+      parse_mode: "HTML",
+      reply_markup: keyboard,
     }),
   });
 }
 
+// =======================
+// 📅 Calculate Days
+// =======================
+function calcDays(endDate) {
+  const now = new Date();
+  const end = new Date(endDate);
+  const diffTime = end - now;
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+}
+
+// =======================
+// 💬 Build Message
+// =======================
+function buildMessage(sub, diff) {
+  const waLink = `https://wa.me/213${sub.phone}?text=Bonjour ${sub.name}, votre abonnement ${sub.product} expire le ${new Date(sub.end).toLocaleDateString()}`;
+
+  let status = "";
+  if (diff <= 0) {
+    status = "❌ <b>ABONNEMENT EXPIRÉ</b>";
+  } else {
+    status = `⚠️ <b>Expire dans ${diff} jour(s)</b>`;
+  }
+
+  const message = `
+${status}
+
+👤 <b>${sub.name}</b>
+📺 ${sub.product}
+📅 Fin: ${new Date(sub.end).toLocaleDateString()}
+📱 ${sub.phone}
+💰 ${sub.price}
+`;
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        {
+          text: "📲 Envoyer WhatsApp",
+          url: waLink,
+        },
+      ],
+    ],
+  };
+
+  return { message, keyboard };
+}
+
+// =======================
+// 🔎 Main Check Function
+// =======================
 async function checkSubscriptions() {
-  const snapshot = await db.collection("subs").get();
+  console.log("🚀 Checking subscriptions...");
+
+  const snapshot = await db.collection("Subs").get();
 
   if (snapshot.empty) {
-    await sendTelegramMessage("❌ No subscriptions found.");
+    console.log("No subscriptions found.");
     return;
   }
 
@@ -58,33 +101,33 @@ async function checkSubscriptions() {
 
     if (!sub.end) continue;
 
-    const diff = calcDays(sub.end.toDate());
+    const diff = calcDays(sub.end.toDate ? sub.end.toDate() : sub.end);
 
-    // 🔎 DEBUG نبعث diff مباشرة
-    await sendTelegramMessage(
-      `🔎 DEBUG\n\n👤 ${sub.name}\n📅 ${sub.end.toDate().toLocaleDateString()}\nDIFF = ${diff}\nalert3Sent = ${sub.alert3Sent}\nalertExpiredSent = ${sub.alertExpiredSent}`
-    );
+    console.log(`Checking ${sub.name} - diff=${diff}`);
 
-    // ⚠️ قبل 3 أيام
-    if (diff === 3 && !sub.alert3Sent) {
-      await sendTelegramMessage("⚠️ تنبيه 3 أيام");
+    // 🔔 3 DAYS OR LESS
+    if (diff <= 3 && diff > 0 && !sub.alert3Sent) {
+      const { message, keyboard } = buildMessage(sub, diff);
+      await sendTelegramMessage(message, keyboard);
+
       await doc.ref.update({ alert3Sent: true });
+      console.log("3-day alert sent.");
     }
 
-    // ❌ يوم الانتهاء فقط
-    if (diff === 0 && !sub.alertExpiredSent) {
-      await sendTelegramMessage("❌ انتهى الاشتراك اليوم");
+    // ❌ EXPIRED
+    if (diff <= 0 && !sub.alertExpiredSent) {
+      const { message, keyboard } = buildMessage(sub, diff);
+      await sendTelegramMessage(message, keyboard);
+
       await doc.ref.update({ alertExpiredSent: true });
+      console.log("Expired alert sent.");
     }
   }
+
+  console.log("✅ Done.");
 }
 
-checkSubscriptions()
-  .then(() => {
-    console.log("Done");
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+// =======================
+// ▶️ Run
+// =======================
+checkSubscriptions();
