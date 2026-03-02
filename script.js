@@ -57,28 +57,14 @@ function buildWhatsAppLink(sub) {
 
   const fullNumber = `213${phone}`;
 
-  const message = encodeURIComponent(
-    `مرحباً 👋
-اشتراككم في ${sub.product} قد انتهى.
-في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
-
-🎖️ Yazid STORE`
-  );
-
-  return `https://wa.me/${fullNumber}?text=${message}`;
-}
-
-// ==========================
-// ✉️ BUILD EXPIRED MESSAGE
-// ==========================
-function buildExpiredMessage(sub) {
   const endDate = sub.end?.toDate
     ? sub.end.toDate()
     : new Date(sub.end);
 
   const formattedDate = endDate.toLocaleDateString("fr-CA");
 
-  const text = `مرحباً 👋
+  const message = encodeURIComponent(
+`مرحباً 👋
 🎖️ Yazid STORE 🎖️
 📱 Numéro WhatsApp : 0541 23 35 75
 
@@ -90,24 +76,10 @@ ${sub.product}
 📌 في حال الرغبة في التجديد
 يرجى التواصل معنا.
 
-✨ نحن في خدمتكم دائماً`;
+✨ نحن في خدمتكم دائماً`
+  );
 
-  const waLink = buildWhatsAppLink(sub);
-
-  const keyboard = waLink
-    ? {
-        inline_keyboard: [
-          [
-            {
-              text: "🟢 إرسال WhatsApp 📲",
-              url: waLink,
-            },
-          ],
-        ],
-      }
-    : undefined;
-
-  return { text, keyboard };
+  return `https://wa.me/${fullNumber}?text=${message}`;
 }
 
 // ==========================
@@ -161,7 +133,37 @@ async function checkSubscriptions() {
 
     // 🔴 فقط عند الانتهاء
     if (diff <= 0 && !sub.alertExpiredSent) {
-      const { text, keyboard } = buildExpiredMessage(sub);
+
+      const formattedDate = endDate.toLocaleDateString("fr-CA");
+
+      const text = `مرحباً 👋
+🎖️ Yazid STORE 🎖️
+📱 Numéro WhatsApp : 0541 23 35 75
+
+نود إعلامكم أن اشتراككم في خدمة
+${sub.product}
+
+قد انتهى بتاريخ ${formattedDate} ⛔
+
+📌 في حال الرغبة في التجديد
+يرجى التواصل معنا.
+
+✨ نحن في خدمتكم دائماً`;
+
+      const waLink = buildWhatsAppLink(sub);
+
+      const keyboard = waLink
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "🟢 إرسال WhatsApp 📲",
+                  url: waLink,
+                },
+              ],
+            ],
+          }
+        : undefined;
 
       await sendTelegramMessage(text, keyboard);
 
