@@ -1,91 +1,144 @@
+// ============================================
+// 🔥 Yazid STORE - Expiration Bot
+// Telegram + WhatsApp Button
+// ============================================
+
 const admin = require("firebase-admin");
 
-const fetch = (...args) =>
-  import("node-fetch").then(({ default: fetch }) => fetch(...args));
+// ==========================
+// 🔐 ENV VARIABLES
+// ==========================
+const {
+  FIREBASE_SERVICE_ACCOUNT,
+  TELEGRAM_TOKEN,
+  TELEGRAM_CHAT_ID
+} = process.env;
 
-/* ===============================
-   🔐 FIREBASE INIT
-=================================*/
-if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
-  throw new Error("FIREBASE_SERVICE_ACCOUNT missing");
+if (!FIREBASE_SERVICE_ACCOUNT || !TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) {
+  console.error("❌ Missing environment variables.");
+  process.exit(1);
 }
 
-const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-
+// ==========================
+// 🔥 FIREBASE INIT
+// ==========================
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert(
+    JSON.parse(FIREBASE_SERVICE_ACCOUNT)
+  ),
 });
 
 const db = admin.firestore();
 
-/* ===============================
-   📅 CALCULATE DAYS
-=================================*/
-function calcDays(endTimestamp) {
+// ==========================
+// 📅 CALCULATE DAYS
+// ==========================
+function calcDays(endDate) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const end = new Date(endTimestamp);
+  const end = new Date(endDate);
   end.setHours(0, 0, 0, 0);
 
   return Math.floor((end - today) / (1000 * 60 * 60 * 24));
 }
 
-/* ===============================
-   ✉️ BUILD MESSAGE
-=================================*/
-function buildExpiredMessage(sub) {
-  const endDate = sub.end.toDate().toLocaleDateString("fr-CA");
+// ==========================
+// 📲 BUILD WHATSAPP LINK
+// ==========================
+function buildWhatsAppLink(sub) {
+  if (!sub.phone) return null;
 
-  return `مرحباً 👋
+  let phone = sub.phone.replace(/\D/g, "");
+
+  if (phone.startsWith("0")) {
+    phone = phone.substring(1);
+  }
+
+  const fullNumber = `213${phone}`;
+
+  const message = encodeURIComponent(
+    `مرحباً 👋
+اشتراككم في ${sub.product} قد انتهى.
+في حال الرغبة في التجديد يرجى الرد على هذه الرسالة.
+
+🎖️ Yazid STORE`
+  );
+
+  return `https://wa.me/${fullNumber}?text=${message}`;
+}
+
+// ==========================
+// ✉️ BUILD EXPIRED MESSAGE
+// ==========================
+function buildExpiredMessage(sub) {
+  const endDate = sub.end?.toDate
+    ? sub.end.toDate()
+    : new Date(sub.end);
+
+  const formattedDate = endDate.toLocaleDateString("fr-CA");
+
+  const text = `مرحباً 👋
 🎖️ Yazid STORE 🎖️
 📱 Numéro WhatsApp : 0541 23 35 75
 
 نود إعلامكم أن اشتراككم في خدمة
 ${sub.product}
 
-قد انتهى بتاريخ ${endDate} ⛔
+قد انتهى بتاريخ ${formattedDate} ⛔
 
 📌 في حال الرغبة في التجديد
 يرجى التواصل معنا.
 
 ✨ نحن في خدمتكم دائماً`;
+
+  const waLink = buildWhatsAppLink(sub);
+
+  const keyboard = waLink
+    ? {
+        inline_keyboard: [
+          [
+            {
+              text: "🟢 إرسال WhatsApp 📲",
+              url: waLink,
+            },
+          ],
+        ],
+      }
+    : undefined;
+
+  return { text, keyboard };
 }
 
-/* ===============================
-   📲 TELEGRAM SEND
-=================================*/
-async function sendTelegramMessage(text) {
-  const token = process.env.TELEGRAM_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-
-  if (!token || !chatId) {
-    throw new Error("Missing TELEGRAM_TOKEN or TELEGRAM_CHAT_ID");
-  }
-
+// ==========================
+// 📤 SEND TELEGRAM
+// ==========================
+async function sendTelegramMessage(text, keyboard) {
   const response = await fetch(
-    `https://api.telegram.org/bot${token}/sendMessage`,
+    `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
+        chat_id: TELEGRAM_CHAT_ID,
+        text,
+        reply_markup: keyboard,
       }),
     }
   );
 
-  const data = await response.json();
-
-  if (!data.ok) {
-    throw new Error("Telegram Error: " + JSON.stringify(data));
+  if (!response.ok) {
+    const err = await response.text();
+    console.error("Telegram API Error:", err);
   }
 }
 
-/* ===============================
-   🔍 CHECK SUBSCRIPTIONS
-=================================*/
+// ==========================
+// 🔍 CHECK SUBSCRIPTIONS
+// ==========================
 async function checkSubscriptions() {
+  console.log("🚀 Checking subscriptions...");
+
   const snapshot = await db.collection("subs").get();
 
   if (snapshot.empty) {
@@ -98,15 +151,19 @@ async function checkSubscriptions() {
 
     if (!sub.end || !sub.product) continue;
 
-    const diff = calcDays(sub.end.toDate());
+    const endDate = sub.end?.toDate
+      ? sub.end.toDate()
+      : new Date(sub.end);
 
-    console.log(`${sub.name} → diff = ${diff}`);
+    const diff = calcDays(endDate);
 
-    // 🔴 فقط إذا منتهي
+    console.log(`${sub.name} → diff=${diff}`);
+
+    // 🔴 فقط عند الانتهاء
     if (diff <= 0 && !sub.alertExpiredSent) {
-      const message = buildExpiredMessage(sub);
+      const { text, keyboard } = buildExpiredMessage(sub);
 
-      await sendTelegramMessage(message);
+      await sendTelegramMessage(text, keyboard);
 
       await doc.ref.update({
         alertExpiredSent: true,
@@ -115,17 +172,16 @@ async function checkSubscriptions() {
       console.log(`✔ Expiration sent to ${sub.name}`);
     }
   }
+
+  console.log("🏁 Done.");
 }
 
-/* ===============================
-   🚀 RUN
-=================================*/
+// ==========================
+// ▶️ RUN
+// ==========================
 checkSubscriptions()
-  .then(() => {
-    console.log("✅ Subscription check completed.");
-    process.exit(0);
-  })
+  .then(() => process.exit(0))
   .catch((err) => {
-    console.error("❌ Error:", err);
+    console.error("Fatal Error:", err);
     process.exit(1);
   });
