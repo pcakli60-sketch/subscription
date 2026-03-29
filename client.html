@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demande abonnement</title>
+
+<style>
+body{
+font-family:Arial;
+background:#f4f6f9;
+padding:20px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:12px;
+max-width:400px;
+margin:auto;
+box-shadow:0 3px 10px rgba(0,0,0,.1);
+}
+
+h3{
+text-align:center;
+}
+
+input,button{
+width:100%;
+padding:12px;
+margin:8px 0;
+font-size:16px;
+}
+
+button{
+background:#1976d2;
+color:white;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+<h3>Demande d'abonnement</h3>
+
+<input id="name" placeholder="Nom et prénom">
+<input id="phone" placeholder="Numéro téléphone">
+
+<button onclick="send()">Envoyer</button>
+
+<p id="msg"></p>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<script>
+const firebaseConfig={
+apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
+authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
+projectId:"systeme-des-abonnements-6a98c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+
+async function send(){
+
+let name=document.getElementById("name").value;
+let phone=document.getElementById("phone").value;
+
+if(!name || !phone){
+alert("Remplir les informations");
+return;
+}
+
+await db.collection("subs").add({
+name:name,
+phone:phone,
+request:true,
+paid:false,
+createdAt:firebase.firestore.Timestamp.now()
+});
+
+document.getElementById("msg").innerHTML="✅ Demande envoyée";
+}
+</script>
+
+</body>
+</html>
