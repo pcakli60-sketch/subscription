@@ -402,127 +402,7 @@ createdAt:firebase.firestore.Timestamp.now()
 
 alert("تمت الإضافة");
 
-}async function startRequest(id){
-
-let s=subs.find(x=>x.id===id);
-
-let email=prompt("Email",s.email||"");
-if(email===null) return;
-
-let profile=prompt("Profil",s.profile||"");
-if(profile===null) return;
-
-let password=prompt("Mode passe",s.password||"");
-if(password===null) return;
-
-let pin=prompt("Code PIN",s.pin||"");
-if(pin===null) return;
-
-let price=prompt("السعر",s.price||"");
-if(price===null) return;
-
-let days=parseInt(prompt("عدد الأيام"),10);
-if(!days) return;
-
-let now=new Date();
-let end=new Date(
-now.getFullYear(),
-now.getMonth(),
-now.getDate()+days
-);
-
-await db.collection("subs").doc(id).update({
-
-email:email,
-profile:profile,
-password:password,
-pin:pin,
-price:price,
-end:firebase.firestore.Timestamp.fromDate(end),
-request:false,
-paid:false
-
-});
-
 }
-
-async function deleteSub(id){
-if(confirm("حذف؟"))
-await db.collection("subs").doc(id).delete();
-}
-
-async function togglePaid(id,val){
-await db.collection("subs").doc(id).update({paid:val});
-}
-
-function formatPhone(phone){
-phone=phone.replace(/\D/g,"");
-if(phone.startsWith("0"))
-phone="213"+phone.substring(1);
-return phone;
-}
-
-function sendWhatsApp(phone,name,product,endDate,days){
-
-if(!phone) return;
-
-phone=formatPhone(phone);
-
-let msg=days<0?
-`مرحباً
-اشتراك ${product}
-انتهى بتاريخ ${endDate}
-يرجى التجديد.`
-
-:
-
-`مرحباً
-اشتراك ${product}
-سينتهي بتاريخ ${endDate}
-متبقي ${days} أيام`;
-
-window.open(
-"https://wa.me/"+phone+"?text="+encodeURIComponent(msg),
-"_blank"
-);
-
-}
-
-async function generatePDF(id){
-
-let s=subs.find(x=>x.id===id);
-
-const { jsPDF } = window.jspdf;
-
-let doc=new jsPDF();
-
-doc.setFontSize(18);
-doc.text("YAZID STORE",105,20,null,null,"center");
-
-doc.setFontSize(12);
-
-doc.text("FACTURE #"+(s.counter||"-"),20,40);
-
-doc.text("Client : "+(s.name||""),20,60);
-doc.text("Téléphone : "+(s.phone||""),20,70);
-doc.text("Email : "+(s.email||""),20,80);
-
-doc.text("Produit : "+(s.product||""),20,100);
-doc.text("Profil : "+(s.profile||""),20,110);
-doc.text("Mode passe : "+(s.password||""),20,120);
-doc.text("Code PIN : "+(s.pin||""),20,130);
-
-let days=calcDays(s.end);
-
-doc.text("Durée : "+days+" jours",20,150);
-doc.text("Prix : "+(s.price||"")+" DA",20,160);
-
-doc.text("Merci pour votre confiance",105,280,null,null,"center");
-
-doc.save("facture_"+s.name+".pdf");
-
-}
-
 function render(){
 
 $("list").innerHTML="";
@@ -542,10 +422,15 @@ let diff=calcDays(s.end);
 if(searchText){
 
 let txt=(
+(s.counter||"")+
 (s.name||"")+
 (s.phone||"")+
 (s.email||"")+
-(s.password||"")
+(s.profile||"")+
+(s.password||"")+
+(s.pin||"")+
+(s.product||"")+
+(s.price||"")
 ).toLowerCase();
 
 if(!txt.includes(searchText)) return;
@@ -642,8 +527,6 @@ $("stExpired").textContent=e;
 $("stUnpaid").textContent=u;
 
 }
-
-</script>
-
+  </script>
 </body>
-</html>  
+</html>
