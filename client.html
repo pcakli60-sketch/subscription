@@ -6,6 +6,7 @@
 <title>Yazid Store</title>
 
 <style>
+
 body{
 margin:0;
 font-family:Arial;
@@ -14,23 +15,20 @@ background:#ede7f6;
 
 .header{
 background:#673ab7;
-color:white;
-padding:20px;
+padding:25px;
 text-align:center;
-border-radius:0 0 20px 20px;
+border-radius:0 0 25px 25px;
 }
 
 .logo{
-width:150px;
-display:block;
-margin:auto;
+width:140px;
 }
 
-.selected-box{
+.selected{
 background:white;
 margin:15px;
-padding:10px;
-border-radius:10px;
+padding:12px;
+border-radius:12px;
 text-align:center;
 font-weight:bold;
 }
@@ -39,57 +37,77 @@ font-weight:bold;
 background:white;
 margin:15px;
 padding:15px;
-border-radius:14px;
-box-shadow:0 2px 6px rgba(0,0,0,.1);
-max-height:350px;
-overflow:auto;
+border-radius:16px;
+box-shadow:0 3px 8px rgba(0,0,0,.08);
 }
 
 .product{
 display:flex;
 align-items:center;
-gap:10px;
-background:white;
-padding:12px;
+gap:12px;
+padding:14px;
 margin-bottom:10px;
-border-radius:10px;
+border-radius:14px;
 border:2px solid #eee;
+cursor:pointer;
+transition:.2s;
 }
 
 .product img{
-width:35px;
-height:35px;
+width:38px;
+height:38px;
+object-fit:contain;
 }
 
 .product.active{
 border:2px solid #673ab7;
 background:#f3e5f5;
-}
-
-.form{
-padding:15px;
+transform:scale(.98);
 }
 
 .card{
 background:white;
+margin:15px;
 padding:15px;
-margin-bottom:15px;
 border-radius:14px;
+box-shadow:0 2px 6px rgba(0,0,0,.1);
+}
+
+.label{
+font-weight:bold;
+margin-bottom:6px;
+}
+
+input{
+width:100%;
+border:none;
+border-bottom:2px solid #ddd;
+padding:10px 5px;
+font-size:15px;
+outline:none;
+background:transparent;
+}
+
+input:focus{
+border-bottom:2px solid #673ab7;
 }
 
 button{
-width:100%;
+width:90%;
+margin:20px auto;
+display:block;
 padding:14px;
 background:#673ab7;
 color:white;
 border:none;
-border-radius:10px;
+border-radius:12px;
 font-size:16px;
 }
 
 button.sent{
 background:#2e7d32;
 }
+
 </style>
 </head>
 
@@ -99,104 +117,91 @@ background:#2e7d32;
 <img src="logo.png" class="logo">
 </div>
 
-<div class="selected-box" id="selected">
+<div class="selected" id="selected">
 اختر المنتج
 </div>
 
 <div class="services">
 
 <div class="product" onclick="selectService(this,'ChatGPT')">
-<input type="radio">
 <img src="chatgpt.jpg">
 <span>ChatGPT</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Netflix')">
-<input type="radio">
 <img src="netflix.jpg">
 <span>Netflix</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Disney+')">
-<input type="radio">
 <img src="disney.jpg">
 <span>Disney+</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Prime Video')">
-<input type="radio">
 <img src="prime.jpg">
 <span>Prime Video</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Shahid VIP')">
-<input type="radio">
 <img src="shahid.jpg">
 <span>Shahid VIP</span>
 </div>
 
 <div class="product" onclick="selectService(this,'IPTV')">
-<input type="radio">
 <img src="iptv.jpg">
 <span>IPTV</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Snapchat+')">
-<input type="radio">
 <img src="snap.jpg">
 <span>Snapchat+</span>
 </div>
 
 <div class="product" onclick="selectService(this,'YouTube Premium')">
-<input type="radio">
 <img src="youtube.jpg">
 <span>YouTube Premium</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Game Pass Ultimate')">
-<input type="radio">
 <img src="gamepass.jpg">
 <span>Game Pass Ultimate</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Crunchyroll')">
-<input type="radio">
-<img src="crunchyroll.png">
+<img src="crunchyroll.jpg">
 <span>Crunchyroll</span>
 </div>
 
 <div class="product" onclick="selectService(this,'CapCut Pro')">
-<input type="radio">
 <img src="capcut.jpg">
 <span>CapCut Pro</span>
 </div>
 
 <div class="product" onclick="selectService(this,'Canva Pro')">
-<input type="radio">
 <img src="canva.jpg">
 <span>Canva Pro</span>
 </div>
 
 </div>
 
-<div class="form">
-
 <div class="card">
-<input id="name" placeholder="Nom et prénom">
+<div class="label">Nom et prénom *</div>
+<input id="name" placeholder="Votre réponse">
 </div>
 
 <div class="card">
-<input id="phone" placeholder="Numéro téléphone">
+<div class="label">Numéro téléphone *</div>
+<input id="phone" placeholder="Votre réponse">
 </div>
 
 <button id="sendBtn" onclick="send()">Envoyer</button>
-
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
+
 const firebaseConfig={
 apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
 authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
@@ -219,10 +224,12 @@ x.classList.remove("active");
 });
 
 el.classList.add("active");
+
 selectedService=name;
 
 document.getElementById("selected").innerHTML=
 "المنتج المختار : "+name;
+
 }
 
 async function send(){
@@ -267,11 +274,9 @@ createdAt:firebase.firestore.Timestamp.now()
 
 alert("✅ تم إرسال الطلب رقم #" + counter);
 
-document.getElementById("sendBtn").innerHTML="✔ تم الإرسال";
-document.getElementById("sendBtn").classList.add("sent");
-
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
+selectedService="";
 
 document.querySelectorAll(".product").forEach(x=>{
 x.classList.remove("active");
@@ -280,10 +285,9 @@ x.classList.remove("active");
 document.getElementById("selected").innerHTML="اختر المنتج";
 
 sending=false;
-document.getElementById("sendBtn").innerHTML="Envoyer";
-document.getElementById("sendBtn").classList.remove("sent");
 
 }
+
 </script>
 
 </body>
