@@ -13,6 +13,7 @@
 --bg:#f4f6f9;
 --card:#ffffff;
 --unpaid:#fdecea;
+--request:#fff8e1;
 }
 
 body{
@@ -100,6 +101,7 @@ color:#fff
 .row-warn{background:#fff3e0}
 .row-expired{background:#fdecea}
 .row-unpaid{background:var(--unpaid)}
+.row-request{background:var(--request)}
 
 .days-box{
 padding:4px 8px;
@@ -127,7 +129,6 @@ padding:5px 8px;
 margin:2px;
 font-size:13px
 }
-
 </style>
 </head>
 
@@ -154,6 +155,7 @@ font-size:13px
 <button class="success" onclick="setFilter('active')">نشط</button>
 <button class="danger" onclick="setFilter('expired')">منتهي</button>
 <button class="warning" onclick="setFilter('unpaid')">غير مدفوع</button>
+<button class="warning" onclick="setFilter('request')">الطلبات</button>
 </div>
 
 <div class="card stats">
@@ -180,6 +182,7 @@ font-size:13px
 <option>IPTV</option>
 <option>Disney+</option>
 <option>Prime Video</option>
+<option>OSN+</option>
 <option>ChatGPT</option>
 <option>YouTube Premium</option>
 <option>Crunchyroll</option>
@@ -278,14 +281,25 @@ return new Date(end);
 }
 
 function calcDays(end){
+
 let endDate=getDateFromEnd(end);
 if(!endDate) return 0;
 
 let today=new Date();
-today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
-endDate=new Date(endDate.getFullYear(),endDate.getMonth(),endDate.getDate());
+today=new Date(
+today.getFullYear(),
+today.getMonth(),
+today.getDate()
+);
+
+endDate=new Date(
+endDate.getFullYear(),
+endDate.getMonth(),
+endDate.getDate()
+);
 
 return Math.floor((endDate-today)/86400000);
+
 }
 
 function onSearch(v){
@@ -308,34 +322,47 @@ return phone;
 
 let days=parseInt($("days").value,10);
 
-if(!days||!$("name").value||!$("phone").value||!$("product").value){
-alert("املأ الحقول المطلوبة ⚠");
+if(!$("name").value||!$("phone").value||!$("product").value){
+alert("املأ الحقول المطلوبة");
 return;
 }
 
 let now=new Date();
-let end=new Date(now.getFullYear(),now.getMonth(),now.getDate()+days);
+let end=new Date(
+now.getFullYear(),
+now.getMonth(),
+now.getDate()+(days||0)
+);
 
 await db.collection("subs").add({
+
 name:$("name").value,
 phone:$("phone").value,
-email:$("email").value,
-profile:$("profile").value,
-password:$("password").value,
-pin:$("pin").value,
+
+email:$("email").value||"",
+profile:$("profile").value||"",
+password:$("password").value||"",
+pin:$("pin").value||"",
+
 product:$("product").value,
-price:$("price").value,
+price:$("price").value||"",
+
 end:firebase.firestore.Timestamp.fromDate(end),
+
 paid:false,
+request:!days,
+
 alert3Sent:false,
 alertExpiredSent:false,
 createdAt:firebase.firestore.Timestamp.now()
+
 });
 
 ["name","phone","email","profile","password","pin","product","price","days"]
 .forEach(i=>$(i).value="");
 
 alert("تمت الإضافة");
+
 }
 
 async function editSub(id){
@@ -348,10 +375,22 @@ let email=prompt("Email",s.email||""); if(email===null)return;
 let profile=prompt("Profil",s.profile||""); if(profile===null)return;
 let password=prompt("Password",s.password||""); if(password===null)return;
 let pin=prompt("PIN",s.pin||""); if(pin===null)return;
+let price=prompt("السعر",s.price||""); if(price===null)return;
+let days=parseInt(prompt("عدد الأيام"),10);
+
+let now=new Date();
+let end=new Date(
+now.getFullYear(),
+now.getMonth(),
+now.getDate()+(days||0)
+);
 
 await db.collection("subs").doc(id).update({
-name,phone,email,profile,password,pin
+name,phone,email,profile,password,pin,price,
+end:firebase.firestore.Timestamp.fromDate(end),
+request:false
 });
+
 }
 
 async function deleteSub(id){
@@ -372,12 +411,12 @@ phone=formatPhone(phone);
 let msg=days<0?
 `مرحباً 👋
 اشتراك ${product}
-انتهى بتاريخ ${endDate} ⛔
+انتهى بتاريخ ${endDate}
 يرجى التجديد.`:
 `مرحباً 👋
 اشتراك ${product}
-سينتهي بتاريخ ${endDate} ⏰
-متبقي ${days} أيام.`;
+سينتهي بتاريخ ${endDate}
+متبقي ${days} أيام`;
 
 window.open(
 "https://wa.me/"+phone+"?text="+encodeURIComponent(msg),
@@ -397,7 +436,7 @@ doc.text("FACTURE",105,20,null,null,"center");
 
 doc.setFontSize(12);
 
-doc.text("Nom : "+(s.name||""),20,50);
+doc.text("Client : "+(s.name||""),20,50);
 doc.text("Téléphone : "+(s.phone||""),20,60);
 doc.text("Email : "+(s.email||""),20,70);
 
@@ -412,6 +451,7 @@ doc.text("Durée : "+days+" jours",20,140);
 doc.text("Prix : "+(s.price||"")+" DA",20,150);
 
 doc.save("facture_"+s.name+".pdf");
+
 }
 
 async function sendAlerts(){
@@ -419,6 +459,7 @@ async function sendAlerts(){
 let alerts=[];
 
 for(let s of subs){
+
 let diff=calcDays(s.end);
 
 if(diff===3&&!s.alert3Sent)
@@ -426,10 +467,11 @@ alerts.push({type:"before",sub:s});
 
 if(diff<0&&!s.alertExpiredSent)
 alerts.push({type:"expired",sub:s});
+
 }
 
 if(alerts.length===0){
-alert("لا توجد تنبيهات حالياً");
+alert("لا توجد تنبيهات");
 return;
 }
 
@@ -468,9 +510,11 @@ item.type==="before"
 
 i++;
 setTimeout(openNext,1200);
+
 }
 
 openNext();
+
 }
 
 function render(){
@@ -489,18 +533,20 @@ let searchData=(
 (s.profile||"")+
 (s.password||"")+
 (s.pin||"")+
-(s.product||"")
+(s.product||"")+
+(s.price||"")
 ).toLowerCase();
 
 if(searchText && !searchData.includes(searchText)) return;
 
-t++;
-diff<0?e++:a++;
-if(!s.paid)u++;
-
 if(currentFilter==="active"&&diff<0)return;
 if(currentFilter==="expired"&&diff>=0)return;
 if(currentFilter==="unpaid"&&s.paid)return;
+if(currentFilter==="request"&&!s.request)return;
+
+t++;
+diff<0?e++:a++;
+if(!s.paid)u++;
 
 let endDate=getDateFromEnd(s.end);
 let endText=endDate?endDate.toLocaleDateString("ar-DZ"):"-";
@@ -508,8 +554,9 @@ let endText=endDate?endDate.toLocaleDateString("ar-DZ"):"-";
 let tr=document.createElement("tr");
 
 tr.className=
-!s.paid?"row-unpaid":
+s.request?"row-request":
 diff<0?"row-expired":
+!s.paid?"row-unpaid":
 diff<=3?"row-warn":
 "row-ok";
 
@@ -542,6 +589,13 @@ onclick="togglePaid('${s.id}',this.checked)">
 
 <td class="actions">
 
+${s.request ?
+`
+<button class="warning"
+onclick="editSub('${s.id}')">🚀</button>
+`
+:
+`
 <button class="main"
 onclick="sendWhatsApp('${s.phone}','${s.name}','${s.product}','${endText}',${diff})">💬</button>
 
@@ -550,6 +604,8 @@ onclick="editSub('${s.id}')">✏️</button>
 
 <button class="warning"
 onclick="generatePDF('${s.id}')">🧾</button>
+`
+}
 
 <button class="danger"
 onclick="deleteSub('${s.id}')">🗑</button>
@@ -565,6 +621,7 @@ $("stTotal").textContent=t;
 $("stActive").textContent=a;
 $("stExpired").textContent=e;
 $("stUnpaid").textContent=u;
+
 }
 
 </script>
