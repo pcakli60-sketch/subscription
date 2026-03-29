@@ -39,6 +39,12 @@ border:none;
 border-radius:8px;
 cursor:pointer;
 }
+
+.success{
+color:green;
+text-align:center;
+font-weight:bold;
+}
 </style>
 </head>
 
@@ -52,9 +58,10 @@ cursor:pointer;
 
 <button onclick="send()">Envoyer</button>
 
-<p id="msg"></p>
+<p id="msg" class="success"></p>
 </div>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
@@ -62,7 +69,10 @@ cursor:pointer;
 const firebaseConfig={
 apiKey:"AIzaSyBTE_aaLCtUHt5MZq95k7uYCQ1vl7jTQvw",
 authDomain:"systeme-des-abonnements-6a98c.firebaseapp.com",
-projectId:"systeme-des-abonnements-6a98c"
+projectId:"systeme-des-abonnements-6a98c",
+storageBucket:"systeme-des-abonnements-6a98c.appspot.com",
+messagingSenderId:"74948745712",
+appId:"1:74948745712:web:ea9140bdf7dafb85baa535"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -70,8 +80,8 @@ const db=firebase.firestore();
 
 async function send(){
 
-let name=document.getElementById("name").value;
-let phone=document.getElementById("phone").value;
+let name=document.getElementById("name").value.trim();
+let phone=document.getElementById("phone").value.trim();
 
 if(!name || !phone){
 alert("Remplir les informations");
@@ -87,6 +97,9 @@ createdAt:firebase.firestore.Timestamp.now()
 });
 
 document.getElementById("msg").innerHTML="✅ Demande envoyée";
+
+document.getElementById("name").value="";
+document.getElementById("phone").value="";
 }
 </script>
 
