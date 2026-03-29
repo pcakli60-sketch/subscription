@@ -15,21 +15,15 @@ background:#ede7f6;
 .header{
 background:#673ab7;
 color:white;
-padding:20px 15px;
-border-radius:0 0 20px 20px;
+padding:20px;
 text-align:center;
+border-radius:0 0 20px 20px;
 }
 
 .logo{
-width:140px;
-margin:auto;
+width:150px;
 display:block;
-}
-
-.subtitle{
-font-size:14px;
-margin-top:8px;
-opacity:.9;
+margin:auto;
 }
 
 .services{
@@ -42,21 +36,43 @@ box-shadow:0 2px 6px rgba(0,0,0,.1);
 
 .services-title{
 font-weight:bold;
+margin-bottom:5px;
+}
+
+.services-desc{
+font-size:13px;
+color:#666;
 margin-bottom:10px;
 }
 
-.grid{
-display:grid;
-grid-template-columns:repeat(3,1fr);
+.product{
+display:flex;
+align-items:center;
 gap:10px;
-text-align:center;
+background:white;
+padding:12px;
+margin-bottom:10px;
+border-radius:10px;
+border:2px solid #eee;
 }
 
-.service{
-background:#f5f5f5;
-padding:10px;
-border-radius:10px;
-font-size:12px;
+.product img{
+width:35px;
+height:35px;
+}
+
+.product span{
+flex:1;
+}
+
+.product.active{
+border:2px solid #673ab7;
+background:#f3e5f5;
+}
+
+.product input{
+width:18px;
+height:18px;
 }
 
 .form{
@@ -76,7 +92,7 @@ font-weight:bold;
 margin-bottom:8px;
 }
 
-input{
+input[type="text"]{
 width:100%;
 border:none;
 border-bottom:2px solid #ddd;
@@ -98,13 +114,6 @@ border:none;
 border-radius:10px;
 font-size:16px;
 }
-
-.success{
-text-align:center;
-color:green;
-font-weight:bold;
-margin-top:10px;
-}
 </style>
 </head>
 
@@ -112,19 +121,92 @@ margin-top:10px;
 
 <div class="header">
 <img src="logo.png" class="logo">
-<div class="subtitle">Remplissez vos informations</div>
 </div>
 
 <div class="services">
-<div class="services-title">Abonnements disponibles</div>
 
-<div class="grid">
-<div class="service">ChatGPT</div>
-<div class="service">Netflix</div>
-<div class="service">IPTV</div>
-<div class="service">Shahid VIP</div>
-<div class="service">Prime Video</div>
-<div class="service">Snapchat+</div>
+<div class="services-title">
+Abonnements disponibles
+</div>
+
+<div class="services-title">
+📦 اختر المنتج *
+</div>
+
+<div class="services-desc">
+اختر الاشتراك الذي تريده
+</div>
+
+<div class="product" onclick="selectService(this,'ChatGPT')">
+<input type="radio" name="product">
+<img src="chatgpt.png">
+<span>ChatGPT</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Netflix')">
+<input type="radio" name="product">
+<img src="netflix.png">
+<span>Netflix</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Disney+')">
+<input type="radio" name="product">
+<img src="disney.png">
+<span>Disney+</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Prime Video')">
+<input type="radio" name="product">
+<img src="prime.png">
+<span>Prime Video</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Shahid VIP')">
+<input type="radio" name="product">
+<img src="shahid.png">
+<span>Shahid VIP</span>
+</div>
+
+<div class="product" onclick="selectService(this,'IPTV')">
+<input type="radio" name="product">
+<img src="iptv.png">
+<span>IPTV</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Snapchat+')">
+<input type="radio" name="product">
+<img src="snap.png">
+<span>Snapchat+</span>
+</div>
+
+<div class="product" onclick="selectService(this,'YouTube Premium')">
+<input type="radio" name="product">
+<img src="youtube.png">
+<span>YouTube Premium</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Game Pass Ultimate')">
+<input type="radio" name="product">
+<img src="gamepass.png">
+<span>Game Pass Ultimate</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Crunchyroll')">
+<input type="radio" name="product">
+<img src="crunchyroll.png">
+<span>Crunchyroll</span>
+</div>
+
+<div class="product" onclick="selectService(this,'CapCut Pro')">
+<input type="radio" name="product">
+<img src="capcut.png">
+<span>CapCut Pro</span>
+</div>
+
+<div class="product" onclick="selectService(this,'Canva Pro')">
+<input type="radio" name="product">
+<img src="canva.png">
+<span>Canva Pro</span>
 </div>
 
 </div>
@@ -133,17 +215,15 @@ margin-top:10px;
 
 <div class="card">
 <div class="label">Nom et prénom *</div>
-<input id="name" placeholder="Votre réponse">
+<input id="name" type="text" placeholder="Votre réponse">
 </div>
 
 <div class="card">
 <div class="label">Numéro téléphone *</div>
-<input id="phone" placeholder="Votre réponse">
+<input id="phone" type="text" placeholder="Votre réponse">
 </div>
 
 <button onclick="send()">Envoyer</button>
-
-<p id="msg" class="success"></p>
 
 </div>
 
@@ -163,10 +243,31 @@ appId:"1:74948745712:web:ea9140bdf7dafb85baa535"
 firebase.initializeApp(firebaseConfig);
 const db=firebase.firestore();
 
+let selectedService="";
+
+function selectService(el,name){
+
+document.querySelectorAll(".product").forEach(x=>{
+x.classList.remove("active");
+x.querySelector("input").checked=false;
+});
+
+el.classList.add("active");
+el.querySelector("input").checked=true;
+
+selectedService=name;
+
+}
+
 async function send(){
 
 let name=document.getElementById("name").value.trim();
 let phone=document.getElementById("phone").value.trim();
+
+if(!selectedService){
+alert("Choisir abonnement");
+return;
+}
 
 if(!name || !phone){
 alert("Remplir les informations");
@@ -176,15 +277,23 @@ return;
 await db.collection("subs").add({
 name:name,
 phone:phone,
+product:selectedService,
 request:true,
 paid:false,
 createdAt:firebase.firestore.Timestamp.now()
 });
 
-document.getElementById("msg").innerHTML="✅ Demande envoyée";
+alert("✅ Demande envoyée");
 
 document.getElementById("name").value="";
 document.getElementById("phone").value="";
+
+document.querySelectorAll(".product").forEach(x=>{
+x.classList.remove("active");
+x.querySelector("input").checked=false;
+});
+
+selectedService="";
 }
 </script>
 
